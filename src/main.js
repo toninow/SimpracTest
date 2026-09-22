@@ -3,6 +3,8 @@ import {scenes} from './scenarios.js';
 import {loadRealRoads} from './geo.js';
 import {junctionOptions,evaluate,outcome,totalFaults} from './core.js';
 import './style.css';
+import {createClioInterior} from './vehicle/clioInterior.js';
+import {createMirrorSystem} from './vehicle/mirrorSystem.js';
 const el=id=>document.getElementById(id);
 const demoCoords=[[0,0],[0,42],[0,88],[0,130],[0,171],[0,206],[0,242],[3,270],[15,288],[35,296],[56,288],[69,269],[65,248],[52,233],[39,227],[30,209],[32,181],[35,152],[36,115],[41,89],[56,67],[76,59],[95,59],[112,64],[124,79],[128,98],[128,122],[128,150],[128,179],[129,206],[129,235],[129,257]].map(([x,z],i)=>({id:i,x,z}));
 const world=new THREE.Scene();world.background=new THREE.Color('#a9cce9');world.fog=new THREE.Fog('#a9cce9',70,270);
@@ -18,33 +20,18 @@ function drawPolyline(points,real=false){if(!real){for(let i=1;i<points.length;i
  const drawn=new Set();let n=0;for(const p of points.paths){for(let i=1;i<p.ns.length;i++){const a=points.nodes.get(p.ns[i-1]),b=points.nodes.get(p.ns[i]);if(!a||!b)continue;const id=Math.min(a.id,b.id)+'-'+Math.max(a.id,b.id);if(drawn.has(id))continue;drawn.add(id);const w=['primary','secondary','tertiary'].includes(p.tags.highway)?9:6;segment(a,b,w+4,mats.walk,-.075);segment(a,b,w,mats.asphalt,0);if(++n>2800)break;}if(n>2800)break;}
 }
 const car=new THREE.Group();const shell=new THREE.Mesh(new THREE.BoxGeometry(1.6,.7,3.7),mats.hood);shell.position.y=.64;car.add(shell);const glass=new THREE.Mesh(new THREE.BoxGeometry(1.42,.53,1.55),mats.window);glass.position.set(0,1.17,-.27);car.add(glass);world.add(car);
-// Habitáculo simplificado anclado a la cámara: las calles siguen siendo el mundo 3D.
-// Es visual y no representa aún una caja de cambios ni retrovisores físicos.
+// El coche simplificado solo mantiene la posición para la navegación; el jugador ve
+// un interior independiente. Evitamos que la carrocería tape la visión de los espejos.
+car.traverse(obj=>obj.layers.set(2));
 world.add(camera);
-const cabin=new THREE.Group();camera.add(cabin);
-const cabinDark=new THREE.MeshStandardMaterial({color:0x131923,roughness:.9,metalness:.07});
-const cabinTrim=new THREE.MeshStandardMaterial({color:0x283342,roughness:.65,metalness:.2});
-function cabinBox(w,h,d,x,y,z,material=cabinDark){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,z);cabin.add(mesh);return mesh;}
-cabinBox(3.25,.38,.55,0,-.83,-1.25);
-cabinBox(3.1,.13,.35,0,-.60,-1.49,cabinTrim);
-cabinBox(.095,2,.12,-1.4,.28,-1.21);
-cabinBox(.095,2,.12,1.4,.28,-1.21);
-cabinBox(2.88,.08,.12,0,.93,-1.21);
-// Volante, radios, columna y palanca. Sus movimientos se sincronizan con las maniobras.
-const wheel=new THREE.Group();wheel.position.set(-.58,-.55,-.86);cabin.add(wheel);
-const rim=new THREE.Mesh(new THREE.TorusGeometry(.27,.036,12,48),cabinDark);wheel.add(rim);
-const hub=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.09,16),cabinTrim);hub.rotation.x=Math.PI/2;hub.position.z=.025;wheel.add(hub);
-for(const angle of [0,Math.PI*2/3,Math.PI*4/3]){const spoke=new THREE.Mesh(new THREE.BoxGeometry(.25,.035,.035),cabinTrim);spoke.position.set(Math.cos(angle)*.13,Math.sin(angle)*.13,0);spoke.rotation.z=angle;wheel.add(spoke);}
-cabinBox(.76,.24,.12,-.58,-.60,-1.13,cabinTrim);
-const shifter=new THREE.Group();shifter.position.set(.62,-.71,-1.05);cabin.add(shifter);
-const stick=new THREE.Mesh(new THREE.CylinderGeometry(.015,.02,.27,12),cabinTrim);stick.position.y=.11;shifter.add(stick);
-const knob=new THREE.Mesh(new THREE.SphereGeometry(.065,12,10),cabinDark);knob.position.y=.24;shifter.add(knob);
-let steeringTarget=0,gearPosition=0,lastCarHeading=null;
-function setCabinGear(gear){gearPosition=gear===-1?-.26:gear===0?0:(gear%2?-.20:.20);}
+const interior=createClioInterior(camera);
+const mirrorSystem=createMirrorSystem({renderer,scene:world,mirrors:interior.mirrors});
+let steeringTarget=0,lastCarHeading=null,carHeading=0;
+function setCabinGear(gear){ /* la palanca y el cuadro se actualizan desde interior.update */ }
 const state={mode:'demo',step:0,log:[],elapsed:0,answerStarted:0,gear:0,speed:0,motion:null,origin:null,graph:null,node:null,previous:null,current:null,destination:null,started:false,finished:false};
 function positionCar(p,heading=0){
  if(lastCarHeading!==null){const diff=Math.atan2(Math.sin(heading-lastCarHeading),Math.cos(heading-lastCarHeading));steeringTarget=THREE.MathUtils.clamp(-diff*6,-.95,.95);}
- lastCarHeading=heading;
+ lastCarHeading=heading;carHeading=heading;
  car.position.set(p.x,.05,p.z);car.rotation.y=heading;const direction=new THREE.Vector3(Math.sin(heading),0,Math.cos(heading));const c=new THREE.Vector3(p.x,.05,p.z);camera.position.copy(c).addScaledVector(direction,-.7).add(new THREE.Vector3(0,1.8,0));camera.lookAt(c.clone().addScaledVector(direction,27).add(new THREE.Vector3(0,1.5,0)));}
 function updateHUD(){el('gear').textContent=state.gear===-1?'R':state.gear===0?'N':state.gear+'ª';el('speed').innerHTML=Math.round(state.speed)+' <small>km/h</small>';el('faults').textContent=totalFaults(state.log);el('clock').textContent=String(Math.floor(state.elapsed/60)).padStart(2,'0')+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0');}
 function say(text){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='es-ES';u.rate=.95;speechSynthesis.speak(u);}catch{}}
@@ -79,9 +66,11 @@ function showJunction(){if(state.mode!=='real'||state.motion)return;const option
  buttons(options.map((o,i)=>({text:String.fromCharCode(65+i)+'. '+({izquierda:'Girar a la izquierda',derecha:'Girar a la derecha',recto:'Continuar de frente'}[o.turn])+' → '+o.name,edge:o})),choice=>{followEdge(state.node,choice.edge);el('choices').replaceChildren();el('feedback').textContent='Avanzando por la vía descargada…';});}
 async function startReal(){el('load').disabled=true;el('geoStatus').textContent='Buscando el lugar y descargando la red vial…';try{const data=await loadRealRoads(el('location').value);if(!data.graph.edges.get(data.start.id)?.length)throw Error('El punto encontrado no tiene conexiones transitables.');state.mode='real';state.started=true;state.finished=false;state.graph=data.graph;state.node=data.start;state.previous=null;state.motion=null;state.log=[];state.elapsed=0;state.speed=0;state.gear=1;lastCarHeading=null;setCabinGear(1);clearRoad();drawPolyline(data.graph,true);el('modal').hidden=true;el('badge').textContent='MAPA REAL · EN PRUEBAS';el('source').textContent='Red vial OSM · '+data.place;el('progress').textContent='Validación pendiente';const edges=data.graph.edges.get(state.node.id);const first=edges.find(e=>!['service','track'].includes(e.highway))||edges[0];const initial=data.graph.nodes.get(first.to);positionCar(state.node,Math.atan2(initial.x-state.node.x,initial.z-state.node.z));el('progress').textContent='Calles reales · navegación libre';info('Geometría real descargada','Seleccione una vía para comenzar.','AVISO: el punto seleccionado es el nodo de carretera más cercano a la ubicación geocodificada. No está verificado que sea la salida del centro de exámenes ni que las señales visibles en el juego reproduzcan las reales.');buttons(edges.map((e,i)=>({text:String.fromCharCode(65+i)+'. '+e.name,edge:e})),c=>{followEdge(state.node,c.edge);el('choices').replaceChildren();});}catch(err){el('geoStatus').textContent='No se ha podido cargar la red vial: '+err.message+' Prueba con una dirección más precisa o vuelve al circuito de demostración.';}finally{el('load').disabled=false;}}
 let last=performance.now();function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(state.started&&!state.finished)state.elapsed+=dt;const m=state.motion;if(m){const p=m.points[m.index],q=m.points[m.index+1];if(q){const len=Math.hypot(q.x-p.x,q.z-p.z)||1;m.fraction+=m.speed*dt/len;const t=Math.min(1,m.fraction);positionCar({x:p.x+(q.x-p.x)*t,z:p.z+(q.z-p.z)*t},Math.atan2(q.x-p.x,q.z-p.z));if(m.fraction>=1){m.index++;m.fraction=0;}}if(m.index>=m.points.length-1)m.done();}
- wheel.rotation.z+=(steeringTarget-wheel.rotation.z)*Math.min(1,dt*6);
+ // Los espejos consultan las posiciones actuales de la carretera antes de renderizar el ojo del conductor.
+ camera.updateMatrixWorld(true);
+ mirrorSystem.update({position:car.position,heading:carHeading});
+ interior.update(dt,{speed:state.speed,gear:state.gear,steering:steeringTarget});
  steeringTarget*=Math.max(0,1-dt*3);
- shifter.rotation.z+=(gearPosition*.4-shifter.rotation.z)*Math.min(1,dt*6);
  updateHUD();renderer.render(world,camera);requestAnimationFrame(frame);}function resize(){const w=el('three').clientWidth,h=el('three').clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}window.addEventListener('resize',resize);resize();requestAnimationFrame(frame);
 el('fullscreen').onclick=async()=>{
  try{if(document.fullscreenElement)await document.exitFullscreen();else await el('app').requestFullscreen();}catch(error){el('feedback').textContent='No se ha podido activar pantalla completa: '+error.message;}
