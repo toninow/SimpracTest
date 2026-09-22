@@ -1,4 +1,6 @@
-# Autoescuela Virtual · Móstoles — prototipo 0.1
+# SimpracTest — prototipo 0.1
+
+Simulador interactivo de entrenamiento para el examen práctico del permiso B en España. **Móstoles es la primera zona de desarrollo**, no el nombre del juego.
 
 Prototipo jugable para entrenar el **práctico** del permiso B desde el ordenador: cámara desde el coche, trayectos animados según decisiones, cambios de marcha simplificados, voz del examinador, seis escenarios encadenados, evaluación orientativa, cronómetro y exportación de resultados.
 
@@ -42,4 +44,4 @@ Los datos geográficos se solicitan directamente a Nominatim y a Overpass; se mu
 
 ## GitHub
 
-Este ZIP no se ha publicado en GitHub. Crea un repositorio nuevo privado y sube estos archivos (sin `node_modules` ni `dist`). No se requieren claves API en el prototipo.
+Código fuente publicado en [toninow/SimpracTest](https://github.com/toninow/SimpracTest). Para actualizar tu copia local ejecuta `git pull origin main` (si tienes cambios locales sin guardar, consérvalos antes de actualizar). No subas `node_modules`, `dist` ni claves privadas. No se requieren claves API en el prototipo.
