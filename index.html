@@ -1,1 +1,50 @@
-<!doctype html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SimpracTest · Examen práctico de conducir</title></head><body><div id="app"><header><div><b>🚗 SimpracTest</b><span class="muted"> Prototipo de conducción por decisiones · Móstoles</span></div><span id="badge">MODO DEMOSTRACIÓN</span></header><main><section id="viewer"><div id="three"></div><div id="status"><span id="source">Circuito ficticio de entrenamiento</span><span id="progress">Preparación</span></div><div id="dashboard"><div><small>VELOCIDAD</small><strong id="speed">0 <small>km/h</small></strong></div><div><small>MARCHA</small><strong id="gear">N</strong></div><div><small>EXAMEN</small><strong id="clock">00:00</strong></div><div><small>FALTAS</small><strong id="faults">0</strong></div></div></section><aside><div id="description"><h2>Preparación del vehículo</h2><p id="instruction">El examinador le indica que inicie la marcha cuando esté preparado.</p><div id="details">Este primer circuito es una demostración, no una ruta real de examen.</div></div><div id="choices"></div><div id="feedback" aria-live="polite"></div><div class="bottom"><button id="restart">Reiniciar examen</button><button id="export">Exportar resultados</button></div></aside></main><footer><span>⚠️ Entrenamiento: no sustituye las clases de autoescuela ni reproduce una prueba oficial.</span><span>Base de calles reales: © colaboradores de OpenStreetMap · ODbL</span></footer><div id="modal" hidden><div class="panel"><h2>Calles reales de Móstoles · módulo experimental</h2><p>La red vial se consultará a OpenStreetMap. Las señales, carriles y maniobras no se consideran verificados. Puedes practicar con el circuito ficticio mientras preparamos una ruta real validada.</p><label>Buscar ubicación de referencia <input id="location" value="Centro de Exámenes DGT, Móstoles, Madrid, España" autocomplete="off"></label><p class="small">La búsqueda geográfica se realiza en directo mediante Nominatim. Confirma visualmente el punto de inicio: la ubicación de un resultado de búsqueda podría ser imprecisa.</p><div id="geoStatus"></div><div class="buttons"><button id="cancel">Volver</button><button id="load">Cargar geometría real</button></div></div></div></div><script type="module" src="/src/main.js"></script></body></html>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070d16">
+  <title>SimpracTest · Examen práctico de conducir</title>
+</head>
+<body>
+  <div id="app">
+    <main id="viewer" data-phase="question" aria-label="Simulador de conducción SimpracTest">
+      <div id="three" aria-label="Vista tridimensional desde el puesto del conductor"></div>
+      <div id="windshield" aria-hidden="true"><div class="mirror mirror-left"></div><div class="mirror mirror-center"></div><div class="mirror mirror-right"></div></div>
+      <header id="topbar">
+        <div class="brand"><b>🚗 SimpracTest</b><span class="muted">Zona de entrenamiento · Móstoles</span></div>
+        <span id="badge">MODO DEMOSTRACIÓN</span>
+      </header>
+      <div id="status"><span id="source">Circuito ficticio de entrenamiento</span><span id="progress">Preparación</span></div>
+      <div id="examiner"><span class="examiner-label">● EXAMINADOR</span><span id="instruction">El examinador le indica que inicie la marcha cuando esté preparado.</span></div>
+      <div id="hud-stack">
+        <div id="dashboard" aria-label="Cuadro de instrumentos">
+          <div><small>VELOCIDAD</small><strong id="speed">0 <small>km/h</small></strong></div>
+          <div><small>MARCHA</small><strong id="gear">N</strong></div>
+          <div><small>EXAMEN</small><strong id="clock">00:00</strong></div>
+          <div><small>FALTAS</small><strong id="faults">0</strong></div>
+        </div>
+        <section id="decision-panel" aria-label="Decisiones del examen">
+          <div id="description"><h2>Preparación del vehículo</h2><div id="details">Este primer circuito es una demostración, no una ruta real de examen.</div></div>
+          <div id="choices" role="group" aria-label="Opciones de maniobra"></div>
+          <div id="feedback" aria-live="polite"></div>
+        </section>
+      </div>
+      <div class="bottom" aria-label="Controles del simulador">
+        <button id="restart" type="button">↻ Reiniciar</button>
+        <button id="fullscreen" type="button" aria-label="Activar o desactivar pantalla completa">⛶ Pantalla completa</button>
+        <button id="export" type="button">↓ Resultados</button>
+      </div>
+      <footer><span>Entrenamiento orientativo, no examen oficial · Vista de demostración ficticia</span><span>Calles reales: © colaboradores de OpenStreetMap · ODbL</span></footer>
+    </main>
+    <div id="modal" hidden role="dialog" aria-modal="true" aria-label="Explorar calles reales">
+      <div class="panel"><h2>Calles reales de Móstoles · módulo experimental</h2>
+      <p>La red vial se consultará a OpenStreetMap. Las señales, carriles y maniobras no se consideran verificados. Puedes practicar con el circuito ficticio mientras preparamos una ruta real validada.</p>
+      <label>Buscar ubicación de referencia <input id="location" value="Centro de Exámenes DGT, Móstoles, Madrid, España" autocomplete="off"></label>
+      <p class="small">La búsqueda geográfica se realiza en directo mediante Nominatim. Confirma visualmente el punto de inicio: la ubicación de un resultado de búsqueda podría ser imprecisa.</p>
+      <div id="geoStatus" role="status"></div><div class="buttons"><button id="cancel" type="button">Volver</button><button id="load" type="button">Cargar geometría real</button></div></div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
