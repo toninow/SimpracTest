@@ -13,7 +13,15 @@ La interfaz ocupa toda la ventana: carretera y habitáculo simplificado (volante
 - Usa **↻ Reiniciar** para comenzar otra vez y **↓ Resultados** para exportar el registro.
 - El botón **Explorar calles reales (experimental)** mantiene el módulo de navegación geográfica existente.
 
-El habitáculo y los espejos son elementos visuales simplificados: los espejos **no muestran una imagen reflejada del tráfico** y las marchas no reproducen todavía la física del motor o el embrague. La ruta demostrativa sigue siendo ficticia.
+### Interior del coche y retrovisores (fase Clio)
+
+El habitáculo se ha sustituido por una **recreación geométrica inspirada en un Renault Clio 2026 de acabado sencillo**, con salpicadero, volante, consola, cuadro digital, palanca manual y puertas. No se ha importado un modelo 3D oficial ni se garantiza una reproducción exacta del acabado o las dimensiones de fábrica: el fotorrealismo y las texturas PBR detalladas siguen pendientes.
+
+Los **tres retrovisores son funcionales en el renderizador**: cada uno utiliza una cámara independiente orientada hacia atrás, dibuja una textura dinámica del entorno y excluye el interior para evitar reflejos recursivos. En la demo podrás ver la carretera y edificios que queden detrás del coche; **todavía no hay tráfico IA** que aparezca en ellos. El izquierdo y derecho se actualizan a la mitad de la frecuencia del espejo central para reducir el coste de renderizado.
+
+Código modular: `src/vehicle/clioInterior.js` (habitáculo, animaciones e instrumentación) y `src/vehicle/mirrorSystem.js` (tres cámaras y texturas). Los antiguos espejos CSS decorativos se han eliminado.
+
+Las marchas y la velocidad son todavía simplificadas: no existe física de motor, embrague o estacionamiento de precisión. La ruta demostrativa sigue siendo ficticia.
 
 ## IMPORTANTE: qué es real y qué no
 
