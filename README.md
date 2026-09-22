@@ -4,6 +4,17 @@ Simulador interactivo de entrenamiento para el examen práctico del permiso B en
 
 Prototipo jugable para entrenar el **práctico** del permiso B desde el ordenador: cámara desde el coche, trayectos animados según decisiones, cambios de marcha simplificados, voz del examinador, seis escenarios encadenados, evaluación orientativa, cronómetro y exportación de resultados.
 
+## Vista inmersiva y controles
+
+La interfaz ocupa toda la ventana: carretera y habitáculo simplificado (volante y palanca animados), instrucciones de voz en la parte superior y preguntas centradas **debajo del cuadro de instrumentos**. Durante el avance las preguntas desaparecen para dejar ver la carretera. El cuadro presenta velocidad, marcha, cronómetro y faltas.
+
+- Selecciona una respuesta pulsando **A, B, C o D**, o haciendo clic.
+- Pulsa **⛶ Pantalla completa** para ampliar la vista y el mismo botón para salir (también puedes usar Esc).
+- Usa **↻ Reiniciar** para comenzar otra vez y **↓ Resultados** para exportar el registro.
+- El botón **Explorar calles reales (experimental)** mantiene el módulo de navegación geográfica existente.
+
+El habitáculo y los espejos son elementos visuales simplificados: los espejos **no muestran una imagen reflejada del tráfico** y las marchas no reproducen todavía la física del motor o el embrague. La ruta demostrativa sigue siendo ficticia.
+
 ## IMPORTANTE: qué es real y qué no
 
 - El **circuito de examen demostrativo es ficticio**. No representa las calles ni las señales reales de Móstoles.
@@ -17,8 +28,8 @@ Prototipo jugable para entrenar el **práctico** del permiso B desde el ordenado
 Instala Node.js LTS y abre PowerShell en la carpeta que contiene este README:
 
 ```powershell
-npm install
-npm run dev
+npm.cmd install
+npm.cmd run dev
 ```
 
 Abre la dirección que indique Vite (habitualmente `http://localhost:5173/`).
