@@ -6,7 +6,7 @@ Prototipo jugable para entrenar el **práctico** del permiso B desde el ordenado
 
 ## Vista inmersiva y controles
 
-La interfaz ocupa toda la ventana: carretera y habitáculo simplificado (volante y palanca animados), instrucciones de voz en la parte superior y **preguntas junto a un minimapa en la pantalla central del coche**. Durante el avance las preguntas desaparecen para dejar ver la carretera. El cuadro presenta velocidad, marcha, cronómetro y faltas.
+La interfaz ocupa toda la ventana: carretera y habitáculo simplificado (volante y palanca animados), instrucciones de voz en la parte superior y **preguntas junto a un minimapa en la pantalla central del coche**. Durante el avance las respuestas desaparecen, pero el minimapa sigue activo. El cuadro presenta velocidad, marcha, cronómetro y faltas.
 
 - Selecciona una respuesta pulsando **A, B, C o D**, o haciendo clic.
 - Pulsa **⛶ Pantalla completa** para ampliar la vista y el mismo botón para salir (también puedes usar Esc).
@@ -16,6 +16,8 @@ La interfaz ocupa toda la ventana: carretera y habitáculo simplificado (volante
 ### Interior del coche y retrovisores (fase Clio)
 
 El habitáculo se ha sustituido por una **recreación geométrica inspirada en un Renault Clio 2026 de acabado sencillo**, con salpicadero, volante, consola, cuadro digital, palanca manual y puertas. No se ha importado un modelo 3D oficial ni se garantiza una reproducción exacta del acabado o las dimensiones de fábrica: el fotorrealismo y las texturas PBR detalladas siguen pendientes.
+
+La representación geométrica incluye al instructor sentado en el asiento delantero derecho y al examinador detrás. Son figuras **provisionales de baja complejidad**, no personajes fotorrealistas; el examinador puede verse en el retrovisor central.
 
 Los **tres retrovisores son funcionales en el renderizador**: cada uno utiliza una cámara independiente orientada hacia atrás, dibuja una textura dinámica del entorno y excluye el interior para evitar reflejos recursivos. En la demo podrás ver la carretera y edificios que queden detrás del coche; **todavía no hay tráfico IA** que aparezca en ellos. El izquierdo y derecho se actualizan a la mitad de la frecuencia del espejo central para reducir el coste de renderizado.
 
@@ -30,6 +32,12 @@ El juego intenta iniciar automáticamente en la coordenada **40.344103, -3.86396
 Si el proveedor geográfico no responde, aparece un error y dos opciones explícitas: volver a intentar la carga o abrir el circuito demostrativo **ficticio**. Nunca se cambia silenciosamente a una ruta inventada bajo el nombre de DGT. El minimapa refleja el mismo recorrido y posición que se visualizan en 3D, con norte arriba y una flecha de rumbo. En modo demo se etiqueta como ficticio.
 
 Las preguntas de la demo didáctica se muestran junto al minimapa, dentro de la pantalla del coche. En el modo de red real solo se ofrecen decisiones de navegación geométrica; **no se califican señales ni maniobras reales no verificadas**.
+
+## Inicio de Móstoles y minimapa
+
+Al abrir SimpracTest se intenta consultar la red OSM alrededor de las coordenadas **40.344103, -3.863962**, indicadas por el usuario como punto de salida previo a la DGT. La posición inicial del coche utiliza dichas coordenadas sin reemplazarlas por la ubicación geocodificada del edificio. El sistema exige que exista un tramo de vía representado en OSM a no más de 12 m; si no se encuentra, muestra un error y permite reintentar o seleccionar conscientemente el circuito ficticio. La conexión con el nodo vial y las decisiones de dirección posteriores son **aproximaciones didácticas**, no un acceso, sentido de circulación ni itinerario de examen verificado.
+
+La pantalla central dibuja un minimapa vectorial con las vías descargadas, la **flecha verde** del coche y una marca amarilla para la salida. El mapa permanece visible durante la marcha. El instructor habla fuera de la pantalla; las respuestas A/B/C/D están dentro. Si el monitor es demasiado pequeño, el panel pasa a una posición flotante para mantener las respuestas legibles. No se muestran todavía señales verificadas, tráfico IA ni un recorrido aprobado por la DGT. Este inicio necesita internet y que el servicio Overpass esté disponible.
 
 ## IMPORTANTE: qué es real y qué no
 
