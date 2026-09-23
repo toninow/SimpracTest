@@ -42,7 +42,7 @@ export function createOccupants({camera,car}) {
  camera.layers.enable(1);
  // El examinador va REALMENTE detrás, en coordenadas del vehículo; se ve en
  // el retrovisor interior, cuya cámara también muestra la capa 3.
- const examiner=person(car,{x:.34,y:1.04,z:-1.18,shirt:examinerCloth,scale:.96});
+ const examiner=person(car,{x:.34,y:1.40,z:-1.18,shirt:examinerCloth,scale:.96});
  examiner.traverse(o=>o.layers.set(3));
  let tick=0;
  function update(dt,{speaking=false}={}){
