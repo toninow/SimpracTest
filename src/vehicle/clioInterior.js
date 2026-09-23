@@ -59,8 +59,8 @@ export function createClioInterior(camera) {
   rounded(.59,.255,.02,glass,-.47,-.49,-.955);
   // Pantalla de SimpracTest (salpicadero inspirado en un Clio, no medidas oficiales).
   // Se amplía para que las opciones y el minimapa sean legibles sin cubrir el parabrisas.
-  rounded(1.17,.67,.05,dark,.58,-.38,-1.12);
-  const screenAnchor=add(new THREE.PlaneGeometry(1.07,.57),lcd,root,.58,-.38,-1.037);
+  rounded(1.17,.67,.05,dark,.58,-.27,-1.12);
+  const screenAnchor=add(new THREE.PlaneGeometry(1.07,.57),lcd,root,.58,-.27,-1.037);
   screenAnchor.name='infotainment-anchor';
   for(let i=0;i<4;i++)box(.04,.017,.015,.32+i*.15,-.73,-1.017,mid);
   // Difusores de ventilación y controles de climatización.
