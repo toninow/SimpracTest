@@ -6,6 +6,7 @@ import {junctionOptions,evaluate,outcome,totalFaults} from './core.js';
 import './style.css';
 import {createClioInterior} from './vehicle/clioInterior.js';
 import {createMirrorSystem} from './vehicle/mirrorSystem.js';
+import {createOccupants} from './vehicle/occupants.js';
 const el=id=>document.getElementById(id);
 const demoCoords=[[0,0],[0,42],[0,88],[0,130],[0,171],[0,206],[0,242],[3,270],[15,288],[35,296],[56,288],[69,269],[65,248],[52,233],[39,227],[30,209],[32,181],[35,152],[36,115],[41,89],[56,67],[76,59],[95,59],[112,64],[124,79],[128,98],[128,122],[128,150],[128,179],[129,206],[129,235],[129,257]].map(([x,z],i)=>({id:i,x,z}));
 const world=new THREE.Scene();world.background=new THREE.Color('#a9cce9');world.fog=new THREE.Fog('#a9cce9',70,270);
@@ -26,6 +27,7 @@ const car=new THREE.Group();const shell=new THREE.Mesh(new THREE.BoxGeometry(1.6
 car.traverse(obj=>obj.layers.set(2));
 world.add(camera);
 const interior=createClioInterior(camera);
+const occupants=createOccupants({camera,car});
 const mirrorSystem=createMirrorSystem({renderer,scene:world,mirrors:interior.mirrors});
 const minimap=createMinimap(el('minimap'));
 const screenCorners=[new THREE.Vector3(),new THREE.Vector3()];
@@ -51,7 +53,7 @@ function placeInfotainment(){
  screenBox.style.left=x1+'px';screenBox.style.top=y1+'px';
  screenBox.style.width=Math.max(100,x2-x1)+'px';screenBox.style.height=Math.max(75,y2-y1)+'px';
 }
-let steeringTarget=0,lastCarHeading=null,carHeading=0,loadSerial=0;
+let steeringTarget=0,lastCarHeading=null,carHeading=0,loadSerial=0,spokenUntil=0;
 function setCabinGear(gear){ /* la palanca y el cuadro se actualizan desde interior.update */ }
 const state={mode:'loading',step:0,log:[],elapsed:0,answerStarted:0,gear:0,speed:0,motion:null,origin:null,graph:null,node:null,previous:null,current:null,destination:null,startPosition:null,started:false,finished:false};
 const LANE_OFFSET=1.45; // mitad aproximada de la calzada española de dos sentidos (no apto para todas las vías)
@@ -70,7 +72,7 @@ function positionCar(p,heading=0,{exactStart=false}={}){
  camera.lookAt(c.clone().addScaledVector(direction,26).add(new THREE.Vector3(0,1.42,0)));
 }
 function updateHUD(){el('gear').textContent=state.gear===-1?'R':state.gear===0?'N':state.gear+'ª';el('speed').innerHTML=Math.round(state.speed)+' <small>km/h</small>';el('faults').textContent=totalFaults(state.log);el('clock').textContent=String(Math.floor(state.elapsed/60)).padStart(2,'0')+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0');}
-function say(text){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='es-ES';u.rate=.95;speechSynthesis.speak(u);}catch{}}
+function say(text){spokenUntil=performance.now()+Math.max(1600,text.length*75);try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='es-ES';u.rate=.95;speechSynthesis.speak(u);}catch{}}
 function setPhase(phase){el('viewer').dataset.phase=phase;}
 function buttons(items,onChoose){
  const list=el('choices');list.replaceChildren();
@@ -125,7 +127,7 @@ function enterReal(data,{atDgt=false}={}){
  const edges=data.graph.edges.get(data.start.id);
  const first=edges.find(e=>!['service','track'].includes(e.highway))||edges[0];
  const initial=data.graph.nodes.get(first.to);
- const heading=Math.atan2(initial.x-data.start.x,initial.z-data.start.z);
+ const heading=atDgt?Math.atan2(data.start.x-data.startPosition.x,data.start.z-data.startPosition.z):Math.atan2(initial.x-data.start.x,initial.z-data.start.z);
  positionCar(atDgt?data.startPosition:data.start,heading,{exactStart:atDgt});
  const warning=atDgt?'La posición inicial corresponde a tus coordenadas ('+MOSTOLES_DGT_REFERENCE.lat+', '+MOSTOLES_DGT_REFERENCE.lon+'). El trazado OSM queda a '+Math.round(data.distanceToRoad)+' m. La conexión inicial es ilustrativa: revisa sobre el terreno sentido, acceso y señales; NO es ruta oficial.':'El punto inicial es un nodo vial próximo a la referencia consultada. No se han verificado señales, carriles ni prioridades.';
  info(atDgt?'Salida DGT · Móstoles':'Geometría de calles','Prepárese. Seleccione la dirección para iniciar la marcha.',warning);
@@ -165,6 +167,7 @@ let last=performance.now();function frame(now){const dt=Math.min(.05,(now-last)/
  camera.updateMatrixWorld(true);
  mirrorSystem.update({position:car.position,heading:carHeading});
  interior.update(dt,{speed:state.speed,gear:state.gear,steering:steeringTarget});
+ occupants.update(dt,{speaking:now<spokenUntil});
  steeringTarget*=Math.max(0,1-dt*3);
  updateHUD();placeInfotainment();minimap.update({position:car.position,course:carHeading});renderer.render(world,camera);requestAnimationFrame(frame);}function resize(){const w=el('three').clientWidth,h=el('three').clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}window.addEventListener('resize',resize);resize();requestAnimationFrame(frame);
 el('fullscreen').onclick=async()=>{
