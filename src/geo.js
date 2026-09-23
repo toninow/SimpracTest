@@ -1,4 +1,4 @@
-import {geoBounds,parseRoads,nearestNode} from './core.js';
+import {geoBounds,parseRoads,nearestNode,metres} from './core.js';
 export async function loadRealRoads(query){const q=query.trim();if(!q)throw Error('Indica una ubicación.');
  const geoRes=await fetch('https://nominatim.openstreetmap.org/search?'+new URLSearchParams({q,format:'json',limit:'5',addressdetails:'1'}),{headers:{'Accept':'application/json'}});
  if(!geoRes.ok)throw Error('El servicio de búsqueda no está disponible ('+geoRes.status+').');const matches=await geoRes.json();
@@ -24,7 +24,6 @@ export async function loadMostolesRoads(){
  if(!response.ok)throw Error('OpenStreetMap no ha entregado la red vial ('+response.status+').');
  const graph=parseRoads(await response.json(),origin);
  const viable=new Set(['service','residential','living_street','unclassified','tertiary','secondary']);
- const {metres}=await import('./core.js');
  // Distancia al eje de un tramo, no al nodo: los nodos OSM pueden estar separados
  // decenas de metros aunque el carril pase junto a las coordenadas indicadas.
  let nearest=null;
@@ -38,8 +37,12 @@ export async function loadMostolesRoads(){
    const t=Math.max(0,Math.min(1,(-a.x*dx-a.z*dz)/denom));
    const snap={x:a.x+t*dx,z:a.z+t*dz};
    const distance=Math.hypot(snap.x,snap.z);
-   // Respetar los sentidos de circulación al escoger desde qué extremo empezar.
-   for(const candidate of [a,b]){
+   // Si la vía es de sentido único, desde un punto interior se continúa hacia
+   // su extremo permitido; nunca se traza una salida inicial a contramano.
+   const forward=(graph.edges.get(a.id)||[]).some(edge=>edge.to===b.id);
+   const backward=(graph.edges.get(b.id)||[]).some(edge=>edge.to===a.id);
+   for(const candidate of [forward?b:null,backward?a:null]){
+    if(!candidate)continue;
     const edges=graph.edges.get(candidate.id)||[];
     if(!edges.some(edge=>viable.has(edge.highway)))continue;
     const score=distance+Math.hypot(candidate.x-snap.x,candidate.z-snap.z)*.002;
