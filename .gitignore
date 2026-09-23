@@ -1,10 +1,31 @@
+# Prototipo web (Vite)
 node_modules/
 dist/
 .env*
 !.env.example
+
+# Proyecto Unity generado por Hub en UnityProject/
+UnityProject/[Ll]ibrary/
+UnityProject/[Tt]emp/
+UnityProject/[Oo]bj/
+UnityProject/[Ll]ogs/
+UnityProject/[Bb]uild/
+UnityProject/[Bb]uilds/
+UnityProject/[Uu]serSettings/
+UnityProject/[Mm]emoryCaptures/
+UnityProject/[Rr]ecordings/
+UnityProject/.vs/
+UnityProject/*.csproj
+UnityProject/*.sln
+UnityProject/*.slnx
+UnityProject/*.user
+UnityProject/*.userprefs
+UnityProject/*.pidb
+UnityProject/*.booproj
+UnityProject/*.unityproj
+
+# Ficheros locales de SO y del editor
 .DS_Store
-node_modules/
-dist/
-.env
-.env.*
-!.env.example
+Thumbs.db
+.vscode/
+.idea/
