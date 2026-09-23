@@ -145,7 +145,7 @@ namespace SimpracTest
             MeshPart("Aro", ProceduralMeshes.Torus(ClioLayout.WheelRadius, ClioLayout.WheelTube, 18, 48),
                 wheel, Vector3.zero, Quaternion.identity, mats.PlasticDark, ClioLayout.CockpitLayer, bin);
             MeshPart("Aro interior", ProceduralMeshes.Torus(ClioLayout.WheelRadius - 0.028f, 0.0045f, 10, 36),
-                wheel, new Vector3(0f, 0f, 0.004f), Quaternion.identity, mats.Trim, ClioLayout.CockpitLayer, bin);
+                wheel, new Vector3(0f, 0f, -0.004f), Quaternion.identity, mats.Trim, ClioLayout.CockpitLayer, bin);
 
             Spoke(wheel, 188f, mats);
             Spoke(wheel, -8f, mats);
@@ -153,10 +153,11 @@ namespace SimpracTest
             Buttons(wheel, 168f, mats);
             Buttons(wheel, 12f, mats);
 
+            // El eje local -Z del aro mira al conductor. El centro y el rombo salen hacia él.
             Cylinder("Centro del volante", wheel, 0.052f, 0.04f,
-                new Vector3(0f, 0f, 0.02f), new Vector3(90f, 0f, 0f), mats.Plastic, ClioLayout.CockpitLayer);
+                new Vector3(0f, 0f, -0.02f), new Vector3(-90f, 0f, 0f), mats.Plastic, ClioLayout.CockpitLayer);
             MeshPart("Rombo geométrico", ProceduralMeshes.Diamond(0.024f, 0.032f, 0.005f),
-                wheel, new Vector3(0f, 0f, 0.046f), Quaternion.identity, mats.Trim, ClioLayout.CockpitLayer, bin);
+                wheel, new Vector3(0f, 0f, -0.048f), Quaternion.identity, mats.Trim, ClioLayout.CockpitLayer, bin);
 
             cabin.LeftGrip = Grip(wheel, 185f, "Empuñadura izquierda");
             cabin.RightGrip = Grip(wheel, -5f, "Empuñadura derecha");
@@ -170,10 +171,10 @@ namespace SimpracTest
             float rad = degrees * Mathf.Deg2Rad;
             var dir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f);
             Box("Radio", wheel, new Vector3(0.11f, 0.038f, 0.02f),
-                dir * 0.09f + new Vector3(0f, 0f, 0.01f),
+                dir * 0.09f + new Vector3(0f, 0f, -0.01f),
                 new Vector3(0f, 0f, degrees), mats.Plastic, ClioLayout.CockpitLayer);
             Box("Inserto", wheel, new Vector3(0.07f, 0.012f, 0.008f),
-                dir * 0.1f + new Vector3(0f, 0f, 0.022f),
+                dir * 0.1f + new Vector3(0f, 0f, -0.024f),
                 new Vector3(0f, 0f, degrees), mats.Trim, ClioLayout.CockpitLayer);
         }
 
@@ -184,7 +185,7 @@ namespace SimpracTest
             for (int i = 0; i < 3; i++)
             {
                 Box("Tecla", wheel, new Vector3(0.022f, 0.012f, 0.008f),
-                    dir * 0.11f + new Vector3(0f, (i - 1) * 0.018f, 0.028f),
+                    dir * 0.11f + new Vector3(0f, (i - 1) * 0.018f, -0.03f),
                     new Vector3(0f, 0f, degrees), mats.PlasticSoft, ClioLayout.CockpitLayer);
             }
         }
