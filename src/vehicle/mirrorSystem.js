@@ -16,7 +16,8 @@ export function createMirrorSystem({renderer,scene,mirrors,quality='medium'}) {
     target.texture.wrapS=THREE.RepeatWrapping;
     target.texture.repeat.x=-1;target.texture.offset.x=1;
     const camera=new THREE.PerspectiveCamera(spec.fov,size[0]/size[1],.08,440);
-    camera.layers.set(0); // excluye el habitáculo (capa 1) y el coche oculto (capa 2)
+    camera.layers.set(0); // mundo; excluye habitáculo 1 y carrocería ficticia 2
+    if(spec.id==='center')camera.layers.enable(3); // examinador físicamente detrás, en el espejo central
     mirrors[spec.id].material.dispose();
     mirrors[spec.id].material=new THREE.MeshBasicMaterial({map:target.texture,toneMapped:false,side:THREE.DoubleSide});
     return {...spec,camera,target};
