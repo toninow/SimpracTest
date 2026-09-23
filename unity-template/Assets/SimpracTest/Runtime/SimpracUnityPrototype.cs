@@ -352,7 +352,7 @@ namespace SimpracTest
             // Volante, palanca manual y brazos en primera persona: aún no tienen rig profesional.
             wheel = new GameObject("Volante manual").transform;
             wheel.SetParent(cabin, false);
-            wheel.localPosition = new Vector3(-.40f, -.54f, .81f);
+            wheel.localPosition = new Vector3(-.40f, -.39f, .98f);
             Ring("Aro volante", wheel, Vector3.zero, .27f, .017f, plastic);
             Block("Centro volante", wheel, new Vector3(.20f, .15f, .085f), new Vector3(0f, 0f, .018f), trim);
             foreach (float side in new [] {-1f, 1f})
@@ -366,8 +366,8 @@ namespace SimpracTest
                 new Vector3(.42f, -.72f, .50f), plastic);
             for (int side = -1; side <= 1; side += 2)
             {
-                Vector3 elbow = new Vector3(side < 0 ? -.79f : .18f, -.97f, .12f);
-                Vector3 wrist = new Vector3(-.40f + side * .23f, -.50f, .77f);
+                Vector3 elbow = new Vector3(side < 0 ? -.79f : .18f, -.93f, .18f);
+                Vector3 wrist = new Vector3(-.40f + side * .23f, -.36f, .94f);
                 Vector3 fore = Vector3.Lerp(elbow, wrist, .67f);
                 Tube("Brazo del conductor", cabin, elbow, fore, .047f, sleeve);
                 Tube("Antebrazo y muñeca", cabin, fore, wrist, .035f, skin);
@@ -534,7 +534,7 @@ namespace SimpracTest
             {
                 Vector2 size = i == 1 ? new Vector2(.39f, .155f) : new Vector2(.30f, .18f);
                 var mirrorRect = ProjectPanel(mirrorLocal[i], size);
-                GUI.DrawTexture(mirrorRect, mirrorTextures[i], ScaleMode.StretchToFill, false);
+                GUI.DrawTextureWithTexCoords(mirrorRect, mirrorTextures[i], new Rect(1f, 0f, -1f, 1f));
             }
 
             Rect screen = ProjectPanel(screenLocal, screenSize);
