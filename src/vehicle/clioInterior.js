@@ -57,10 +57,12 @@ export function createClioInterior(camera) {
   // Cuadro digital compacto y visera.
   rounded(.66,.31,.045,dark,-.47,-.49,-1.01);
   rounded(.59,.255,.02,glass,-.47,-.49,-.955);
-  // Pantalla central sobria (sin apariencia deportiva).
-  rounded(.48,.31,.038,dark,.43,-.41,-1.09);
-  rounded(.405,.235,.015,lcd,.43,-.41,-1.042);
-  for(let i=0;i<4;i++)box(.045,.025,.015,.28+i*.10,-.57,-1.004,mid);
+  // Pantalla de SimpracTest (salpicadero inspirado en un Clio, no medidas oficiales).
+  // Se amplía para que las opciones y el minimapa sean legibles sin cubrir el parabrisas.
+  rounded(1.17,.67,.05,dark,.58,-.38,-1.12);
+  const screenAnchor=add(new THREE.PlaneGeometry(1.07,.57),lcd,root,.58,-.38,-1.037);
+  screenAnchor.name='infotainment-anchor';
+  for(let i=0;i<4;i++)box(.04,.017,.015,.32+i*.15,-.73,-1.017,mid);
   // Difusores de ventilación y controles de climatización.
   for(const x of [.15,.72]){
     rounded(.18,.115,.025,dark,x,-.65,-.994);
@@ -141,5 +143,5 @@ export function createClioInterior(camera) {
     root.traverse(obj=>{if(obj.isMesh){obj.geometry.dispose();if(obj.material&&!materials.includes(obj.material))obj.material.dispose();}});
     texture.dispose();materials.forEach(m=>m.dispose());root.removeFromParent();
   };
-  return {root,wheel,shifter,mirrors,update,dispose};
+  return {root,wheel,shifter,mirrors,screenAnchor,update,dispose};
 }
