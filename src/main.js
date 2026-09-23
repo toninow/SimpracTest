@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {scenes} from './scenarios.js';
-import {loadRealRoads} from './geo.js';
+import {loadRealRoads,loadMostolesRoads,MOSTOLES_DGT_REFERENCE} from './geo.js';
+import {createMinimap} from './ui/minimap.js';
 import {junctionOptions,evaluate,outcome,totalFaults} from './core.js';
 import './style.css';
 import {createClioInterior} from './vehicle/clioInterior.js';
@@ -26,13 +27,39 @@ car.traverse(obj=>obj.layers.set(2));
 world.add(camera);
 const interior=createClioInterior(camera);
 const mirrorSystem=createMirrorSystem({renderer,scene:world,mirrors:interior.mirrors});
+const minimap=createMinimap(el('minimap'));
+const screenCorners=[new THREE.Vector3(),new THREE.Vector3()];
+const screenBox=el('infotainment');
+function placeInfotainment(){
+ camera.updateMatrixWorld(true);interior.screenAnchor.updateWorldMatrix(true,false);
+ const w=el('three').clientWidth,h=el('three').clientHeight;
+ if(!w||!h)return;
+ const positions=[[-.535,.285],[.535,-.285]];
+ for(let i=0;i<2;i++)screenCorners[i].set(...positions[i],.006).applyMatrix4(interior.screenAnchor.matrixWorld).project(camera);
+ const x1=(screenCorners[0].x+1)*w/2,y1=(1-screenCorners[0].y)*h/2;
+ const x2=(screenCorners[1].x+1)*w/2,y2=(1-screenCorners[1].y)*h/2;
+ if(![x1,x2,y1,y2].every(Number.isFinite))return;
+ screenBox.style.left=x1+'px';screenBox.style.top=y1+'px';
+ screenBox.style.width=Math.max(100,x2-x1)+'px';screenBox.style.height=Math.max(75,y2-y1)+'px';
+}
 let steeringTarget=0,lastCarHeading=null,carHeading=0;
 function setCabinGear(gear){ /* la palanca y el cuadro se actualizan desde interior.update */ }
-const state={mode:'demo',step:0,log:[],elapsed:0,answerStarted:0,gear:0,speed:0,motion:null,origin:null,graph:null,node:null,previous:null,current:null,destination:null,started:false,finished:false};
-function positionCar(p,heading=0){
- if(lastCarHeading!==null){const diff=Math.atan2(Math.sin(heading-lastCarHeading),Math.cos(heading-lastCarHeading));steeringTarget=THREE.MathUtils.clamp(-diff*6,-.95,.95);}
+const state={mode:'loading',step:0,log:[],elapsed:0,answerStarted:0,gear:0,speed:0,motion:null,origin:null,graph:null,node:null,previous:null,current:null,destination:null,startPosition:null,started:false,finished:false};
+const LANE_OFFSET=1.45; // mitad aproximada de la calzada española de dos sentidos (no apto para todas las vías)
+function positionCar(p,heading=0,{exactStart=false}={}){
+ if(lastCarHeading!==null){
+  const diff=Math.atan2(Math.sin(heading-lastCarHeading),Math.cos(heading-lastCarHeading));
+  steeringTarget=THREE.MathUtils.clamp(-diff*6,-.95,.95);
+ }
  lastCarHeading=heading;carHeading=heading;
- car.position.set(p.x,.05,p.z);car.rotation.y=heading;const direction=new THREE.Vector3(Math.sin(heading),0,Math.cos(heading));const c=new THREE.Vector3(p.x,.05,p.z);camera.position.copy(c).addScaledVector(direction,-.7).add(new THREE.Vector3(0,1.8,0));camera.lookAt(c.clone().addScaledVector(direction,27).add(new THREE.Vector3(0,1.5,0)));}
+ const direction=new THREE.Vector3(Math.sin(heading),0,Math.cos(heading));
+ const right=new THREE.Vector3(Math.cos(heading),0,-Math.sin(heading));
+ const shift=exactStart?0:LANE_OFFSET;
+ const c=new THREE.Vector3(p.x,.05,p.z).addScaledVector(right,shift);
+ car.position.copy(c);car.rotation.y=heading;
+ camera.position.copy(c).addScaledVector(direction,-.70).addScaledVector(right,-.30).add(new THREE.Vector3(0,1.42,0));
+ camera.lookAt(c.clone().addScaledVector(direction,26).add(new THREE.Vector3(0,1.42,0)));
+}
 function updateHUD(){el('gear').textContent=state.gear===-1?'R':state.gear===0?'N':state.gear+'ª';el('speed').innerHTML=Math.round(state.speed)+' <small>km/h</small>';el('faults').textContent=totalFaults(state.log);el('clock').textContent=String(Math.floor(state.elapsed/60)).padStart(2,'0')+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0');}
 function say(text){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='es-ES';u.rate=.95;speechSynthesis.speak(u);}catch{}}
 function setPhase(phase){el('viewer').dataset.phase=phase;}
@@ -55,26 +82,82 @@ document.addEventListener('keydown',event=>{
   const option=el('choices').querySelectorAll('button')[index];if(option&&!option.disabled){event.preventDefault();option.click();}
  }
 });
-function info(title,voice,details){el('description').querySelector('h2').textContent=title;el('instruction').textContent='«'+voice+'»';el('details').textContent=details;el('feedback').replaceChildren();state.answerStarted=performance.now();say(voice);}
-function startDemo(){state.mode='demo';state.started=true;state.finished=false;state.step=0;state.log=[];state.elapsed=0;state.gear=0;state.speed=0;state.motion=null;state.graph=null;lastCarHeading=null;setCabinGear(0);setPhase('question');el('source').textContent='Circuito ficticio de entrenamiento (NO calles reales)';el('badge').textContent='MODO DEMOSTRACIÓN';clearRoad();drawPolyline(demoCoords);positionCar(demoCoords[0],0);renderDemo();}
-function renderDemo(){if(state.step>=scenes.length)return finish();const s=scenes[state.step];el('progress').textContent='Escena '+(state.step+1)+' de '+scenes.length;info(s.name,s.voice,s.details+' · Situación hipotética diseñada para entrenar decisiones, no una señal verificada de Móstoles.');buttons(s.choices.map((c,i)=>({...c,text:String.fromCharCode(65+i)+'. '+c.text})),choice=>{if(state.motion)return;const result=evaluate(choice);state.log.push({...result,scene:s.id,decision:choice.text,seconds:Math.round((performance.now()-state.answerStarted)/1000)});state.gear=choice.gear;state.speed=choice.speed;setCabinGear(state.gear);updateHUD();el('feedback').textContent='Decisión registrada. Ejecutando la maniobra…';el('choices').replaceChildren();setPhase('moving');const beginMove=()=>{state.motion={kind:'demo',points:demoCoords.slice(state.step*5,Math.min(demoCoords.length,(state.step+1)*5+1)),index:0,fraction:0,speed:Math.max(8,state.speed)/3.6,done:()=>{state.motion=null;state.step++;renderDemo();}};};if(state.speed===0){el('feedback').textContent='El vehículo se ha detenido. Continúe cuando considere que puede reanudar la marcha.';buttons([{text:'Reanudar la marcha desde la detención'}],()=>{state.speed=8;el('choices').replaceChildren();beginMove();});}else beginMove();});}
+function info(title,voice,details){el('description').querySelector('h2').textContent=title;el('instruction').textContent='«'+voice+'»';el('details').textContent=details;el('details').title=details;el('feedback').replaceChildren();state.answerStarted=performance.now();say(voice);}
+function startDemo(){state.mode='demo';state.started=true;state.finished=false;state.step=0;state.log=[];state.elapsed=0;state.gear=0;state.speed=0;state.motion=null;state.graph=null;state.startPosition=null;lastCarHeading=null;setCabinGear(0);setPhase('question');el('start-screen').hidden=true;el('screen-mode').textContent='DEMO · NO ES DGT';minimap.setRoute({demoPoints:demoCoords,label:'Circuito ficticio'});el('source').textContent='Circuito ficticio de entrenamiento (NO calles reales)';el('badge').textContent='MODO DEMOSTRACIÓN';clearRoad();drawPolyline(demoCoords);positionCar(demoCoords[0],0);renderDemo();}
+function renderDemo(){if(state.step>=scenes.length)return finish();const s=scenes[state.step];el('progress').textContent='Escena '+(state.step+1)+' de '+scenes.length;info(s.name,s.voice,s.details+' · Situación hipotética diseñada para entrenar decisiones, no una señal verificada de Móstoles.');buttons(s.choices.map((c,i)=>({...c,text:String.fromCharCode(65+i)+'. '+c.text})),choice=>{if(state.motion)return;const result=evaluate(choice);state.log.push({...result,scene:s.id,decision:choice.text,seconds:Math.round((performance.now()-state.answerStarted)/1000)});state.gear=choice.gear;state.speed=choice.speed;setCabinGear(state.gear);updateHUD();el('feedback').textContent='Decisión registrada. Ejecutando la maniobra…';el('choices').replaceChildren();setPhase('moving');const beginMove=()=>{state.motion={kind:'demo',points:demoCoords.slice(state.step*5,Math.min(demoCoords.length,(state.step+1)*5+1)),index:0,fraction:0,speed:Math.max(8,state.speed)/3.6,done:()=>{state.motion=null;state.step++;renderDemo();}};};if(state.speed===0){el('feedback').textContent='El vehículo se ha detenido. Continúe cuando considere que puede reanudar la marcha.';buttons([{text:'Reanudar la marcha desde la detención'}],()=>{state.speed=8;el('choices').replaceChildren();setPhase('moving');beginMove();});}else beginMove();});}
 function finish(){state.finished=true;state.speed=0;state.gear=0;setCabinGear(0);setPhase('result');const o=outcome(state.log);el('progress').textContent='Examen finalizado';el('description').querySelector('h2').textContent='Resultado de entrenamiento';el('instruction').textContent=(o.passed?'Resultado simulado: APTO':'Resultado simulado: NO APTO')+' · L: '+o.l+' · D: '+o.d+' · E: '+o.e;el('details').textContent='Calificación didáctica, NO oficial. Cada gravedad depende del escenario descrito y no sustituye el juicio de un examinador.';el('choices').replaceChildren();const review=document.createElement('div');review.className='review';review.textContent=state.log.map((e,i)=>(i+1)+'. '+e.code+' · '+e.decision+'\n'+e.explanation).join('\n\n');el('choices').append(review);el('feedback').textContent='Puedes reiniciar o exportar las decisiones para revisarlas con tu profesor.';}
-function followEdge(from,edge){setPhase('moving');state.destination=state.graph.nodes.get(edge.to);state.motion={kind:'real',points:[from,state.destination],index:0,fraction:0,speed:7,done:()=>{state.previous=from;state.node=state.destination;state.motion=null;showJunction();}};state.speed=25;state.gear=2;setCabinGear(2);}
+function followEdge(from,edge){
+ if(!edge||!state.graph?.nodes.has(edge.to))return;
+ setPhase('moving');
+ state.destination=state.graph.nodes.get(edge.to);
+ const points=state.startPosition?[state.startPosition,from,state.destination]:[from,state.destination];
+ state.startPosition=null;
+ state.motion={kind:'real',points,index:0,fraction:0,speed:7,
+  done:()=>{state.previous=from;state.node=state.destination;state.motion=null;showJunction();}};
+ state.speed=25;state.gear=2;setCabinGear(2);
+}
 function showJunction(){if(state.mode!=='real'||state.motion)return;const options=junctionOptions(state.graph,state.node.id,state.previous.id);if(!options.length){el('progress').textContent='Fin de esta vía';info('Fin del tramo','Cuando pueda, continúe por una vía permitida.','El grafo descargado no contiene una conexión válida sin retroceder. Puedes reiniciar desde otra posición.');buttons([{text:'Volver a modo demostración'}],startDemo);return;}
  if(options.length===1){followEdge(state.node,options[0]);return;}
  el('progress').textContent='Intersección de geometría real';info('Intersección · elegir dirección','En la próxima intersección, continúe por una vía permitida.','Se muestran únicamente conexiones dibujadas en OpenStreetMap. NO se han validado semáforos, señales, número de carriles ni prioridad. Este módulo NO califica las decisiones de circulación.');
  buttons(options.map((o,i)=>({text:String.fromCharCode(65+i)+'. '+({izquierda:'Girar a la izquierda',derecha:'Girar a la derecha',recto:'Continuar de frente'}[o.turn])+' → '+o.name,edge:o})),choice=>{followEdge(state.node,choice.edge);el('choices').replaceChildren();el('feedback').textContent='Avanzando por la vía descargada…';});}
-async function startReal(){el('load').disabled=true;el('geoStatus').textContent='Buscando el lugar y descargando la red vial…';try{const data=await loadRealRoads(el('location').value);if(!data.graph.edges.get(data.start.id)?.length)throw Error('El punto encontrado no tiene conexiones transitables.');state.mode='real';state.started=true;state.finished=false;state.graph=data.graph;state.node=data.start;state.previous=null;state.motion=null;state.log=[];state.elapsed=0;state.speed=0;state.gear=1;lastCarHeading=null;setCabinGear(1);clearRoad();drawPolyline(data.graph,true);el('modal').hidden=true;el('badge').textContent='MAPA REAL · EN PRUEBAS';el('source').textContent='Red vial OSM · '+data.place;el('progress').textContent='Validación pendiente';const edges=data.graph.edges.get(state.node.id);const first=edges.find(e=>!['service','track'].includes(e.highway))||edges[0];const initial=data.graph.nodes.get(first.to);positionCar(state.node,Math.atan2(initial.x-state.node.x,initial.z-state.node.z));el('progress').textContent='Calles reales · navegación libre';info('Geometría real descargada','Seleccione una vía para comenzar.','AVISO: el punto seleccionado es el nodo de carretera más cercano a la ubicación geocodificada. No está verificado que sea la salida del centro de exámenes ni que las señales visibles en el juego reproduzcan las reales.');buttons(edges.map((e,i)=>({text:String.fromCharCode(65+i)+'. '+e.name,edge:e})),c=>{followEdge(state.node,c.edge);el('choices').replaceChildren();});}catch(err){el('geoStatus').textContent='No se ha podido cargar la red vial: '+err.message+' Prueba con una dirección más precisa o vuelve al circuito de demostración.';}finally{el('load').disabled=false;}}
+function enterReal(data,{atDgt=false}={}){
+ if(!data.graph.edges.get(data.start.id)?.length)throw Error('El punto cercano no tiene conexiones transitables.');
+ state.mode='real';state.started=true;state.finished=false;
+ state.graph=data.graph;state.origin=data.origin;state.node=data.start;state.previous=null;
+ state.motion=null;state.log=[];state.elapsed=0;state.speed=0;state.gear=0;
+ state.startPosition=atDgt?data.startPosition:null;
+ lastCarHeading=null;setCabinGear(0);clearRoad();drawPolyline(data.graph,true);
+ minimap.setRoute({graph:data.graph,label:atDgt?'Salida indicada DGT':'Red OSM'});
+ el('modal').hidden=true;el('start-screen').hidden=true;
+ el('badge').textContent='CALLES OSM · EXPLORACIÓN';
+ el('source').textContent='© OpenStreetMap · '+data.place;
+ el('progress').textContent=atDgt?'Salida indicada · sin ruta oficial':'Navegación libre · sin verificar';
+ el('screen-mode').textContent=atDgt?'DGT · PUNTO INDICADO':'CALLES OSM';
+ const edges=data.graph.edges.get(data.start.id);
+ const first=edges.find(e=>!['service','track'].includes(e.highway))||edges[0];
+ const initial=data.graph.nodes.get(first.to);
+ const heading=Math.atan2(initial.x-data.start.x,initial.z-data.start.z);
+ positionCar(atDgt?data.startPosition:data.start,heading,{exactStart:atDgt});
+ const warning=atDgt?'La posición inicial corresponde a las coordenadas que has indicado (40.344103, -3.863962). La conexión de '+Math.round(data.distanceToRoad)+' m hasta la red OSM es aproximada; comprueba el acceso real. No se han validado las señales ni una ruta oficial.':'El punto inicial es un nodo vial próximo a la referencia consultada. No se han verificado señales, carriles ni prioridades.';
+ info(atDgt?'Salida DGT · Móstoles':'Geometría de calles','Prepárese. Seleccione la dirección para iniciar la marcha.',warning);
+ buttons(edges.map((e,i)=>({text:String.fromCharCode(65+i)+'. '+e.name,edge:e})),c=>{
+  el('choices').replaceChildren();followEdge(state.node,c.edge);
+ });
+ minimap.update({position:car.position,course:carHeading,force:true});
+}
+async function startMostoles(){
+ el('start-screen').hidden=false;el('retry-dgt').hidden=true;el('try-demo').hidden=true;
+ el('start-message').textContent='Cargando calles próximas al punto indicado: 40.344103, -3.863962…';
+ el('restart').disabled=true;
+ state.mode='loading';state.started=false;state.motion=null;state.speed=0;
+ el('choices').replaceChildren();el('modal').hidden=true;
+ try{
+  const data=await loadMostolesRoads();
+  enterReal(data,{atDgt:true});
+ }catch(err){
+  el('start-message').textContent='No se pudo iniciar desde la salida indicada: '+err.message+' Puedes reintentar o abrir explícitamente el circuito ficticio.';
+  el('retry-dgt').hidden=false;el('try-demo').hidden=false;
+  el('badge').textContent='SIN DATOS DE CALLES';
+ }finally{el('restart').disabled=false;}
+}
+async function startReal(){
+ el('load').disabled=true;
+ el('geoStatus').textContent='Buscando el lugar y descargando la red vial…';
+ try{enterReal(await loadRealRoads(el('location').value));}
+ catch(err){el('geoStatus').textContent='No se ha podido cargar la red vial: '+err.message;}
+ finally{el('load').disabled=false;}
+}
 let last=performance.now();function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(state.started&&!state.finished)state.elapsed+=dt;const m=state.motion;if(m){const p=m.points[m.index],q=m.points[m.index+1];if(q){const len=Math.hypot(q.x-p.x,q.z-p.z)||1;m.fraction+=m.speed*dt/len;const t=Math.min(1,m.fraction);positionCar({x:p.x+(q.x-p.x)*t,z:p.z+(q.z-p.z)*t},Math.atan2(q.x-p.x,q.z-p.z));if(m.fraction>=1){m.index++;m.fraction=0;}}if(m.index>=m.points.length-1)m.done();}
  // Los espejos consultan las posiciones actuales de la carretera antes de renderizar el ojo del conductor.
  camera.updateMatrixWorld(true);
  mirrorSystem.update({position:car.position,heading:carHeading});
  interior.update(dt,{speed:state.speed,gear:state.gear,steering:steeringTarget});
  steeringTarget*=Math.max(0,1-dt*3);
- updateHUD();renderer.render(world,camera);requestAnimationFrame(frame);}function resize(){const w=el('three').clientWidth,h=el('three').clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}window.addEventListener('resize',resize);resize();requestAnimationFrame(frame);
+ updateHUD();placeInfotainment();minimap.update({position:car.position,course:carHeading});renderer.render(world,camera);requestAnimationFrame(frame);}function resize(){const w=el('three').clientWidth,h=el('three').clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}window.addEventListener('resize',resize);resize();requestAnimationFrame(frame);
 el('fullscreen').onclick=async()=>{
  try{if(document.fullscreenElement)await document.exitFullscreen();else await el('app').requestFullscreen();}catch(error){el('feedback').textContent='No se ha podido activar pantalla completa: '+error.message;}
 };
 document.addEventListener('fullscreenchange',()=>{el('fullscreen').textContent=document.fullscreenElement?'⛶ Salir de pantalla completa':'⛶ Pantalla completa';resize();});
-el('restart').onclick=startDemo;el('export').onclick=()=>{const blob=new Blob([JSON.stringify({mode:state.mode,date:new Date().toISOString(),log:state.log,result:outcome(state.log)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='simulacro-mostoles-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
-const geoBtn=document.createElement('button');geoBtn.id='geoBtn';geoBtn.textContent='🌍 Explorar calles reales (experimental)';el('restart').before(geoBtn);geoBtn.onclick=()=>{el('modal').hidden=false;};el('cancel').onclick=()=>{el('modal').hidden=true;};el('load').onclick=startReal;startDemo();
+el('restart').onclick=startMostoles;el('demo').onclick=startDemo;
+el('retry-dgt').onclick=startMostoles;el('try-demo').onclick=startDemo;el('export').onclick=()=>{const blob=new Blob([JSON.stringify({mode:state.mode,date:new Date().toISOString(),log:state.log,result:outcome(state.log)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='simulacro-mostoles-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+const geoBtn=document.createElement('button');geoBtn.id='geoBtn';geoBtn.textContent='🌍 Explorar calles reales (experimental)';el('restart').before(geoBtn);geoBtn.onclick=()=>{el('modal').hidden=false;};el('cancel').onclick=()=>{el('modal').hidden=true;};el('load').onclick=startReal;startMostoles();
