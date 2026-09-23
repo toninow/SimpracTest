@@ -2,8 +2,9 @@
 // En modo OSM dibuja geometría recibida, no una ruta oficial de examen.
 export function createMinimap(canvas) {
   const ctx=canvas.getContext('2d');
-  let roads=[], mode='loading', center={x:0,z:0}, heading=0, lastDraw=0, place='';
-  function setRoute({graph=null,demoPoints=null,label=''}={}){
+  let roads=[], mode='loading', center={x:0,z:0}, heading=0, lastDraw=0, place='', startPoint=null;
+  function setRoute({graph=null,demoPoints=null,label='',origin=null}={}){
+    startPoint=origin;
     roads=graph ? graph.paths.flatMap(path=>{
       const segments=[];
       for(let i=1;i<path.ns.length;i++){
@@ -45,6 +46,12 @@ export function createMinimap(canvas) {
       ctx.moveTo(ax,ay);ctx.lineTo(bx,by);
     }
     ctx.stroke();
+    if(startPoint){
+      const sx=(startPoint.x-center.x)*scale,sy=(startPoint.z-center.z)*scale;
+      if(Math.abs(sx)<width/2&&Math.abs(sy)<height/2){
+        ctx.beginPath();ctx.arc(sx,sy,4,0,Math.PI*2);ctx.fillStyle='#ffd16b';ctx.fill();
+      }
+    }
     ctx.strokeStyle='#596e81';ctx.lineWidth=1;ctx.stroke();
     // Proyección: z positivo apunta al sur en el mapa.
     ctx.rotate(Math.PI-heading);
