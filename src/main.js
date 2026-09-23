@@ -39,6 +39,15 @@ function placeInfotainment(){
  const x1=(screenCorners[0].x+1)*w/2,y1=(1-screenCorners[0].y)*h/2;
  const x2=(screenCorners[1].x+1)*w/2,y2=(1-screenCorners[1].y)*h/2;
  if(![x1,x2,y1,y2].every(Number.isFinite))return;
+ // En pantallas estrechas la proyección del GPS 3D puede quedar fuera del viewport.
+ // Se utiliza una vista flotante de respaldo para que las respuestas siempre sean accesibles.
+ if(w<850||x1<6||x2>w-6||y2>h-44){
+  screenBox.style.left=(w<850?8:Math.max(8,w-430))+'px';
+  screenBox.style.top=Math.round(h*.40)+'px';
+  screenBox.style.width=Math.min(w-16,420)+'px';
+  screenBox.style.height=Math.min(Math.round(h*.46),340)+'px';
+  return;
+ }
  screenBox.style.left=x1+'px';screenBox.style.top=y1+'px';
  screenBox.style.width=Math.max(100,x2-x1)+'px';screenBox.style.height=Math.max(75,y2-y1)+'px';
 }
