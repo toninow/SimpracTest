@@ -6,12 +6,12 @@ Prototipo jugable para entrenar el **práctico** del permiso B desde el ordenado
 
 ## Vista inmersiva y controles
 
-La interfaz ocupa toda la ventana: carretera y habitáculo simplificado (volante y palanca animados), instrucciones de voz en la parte superior y preguntas centradas **debajo del cuadro de instrumentos**. Durante el avance las preguntas desaparecen para dejar ver la carretera. El cuadro presenta velocidad, marcha, cronómetro y faltas.
+La interfaz ocupa toda la ventana: carretera y habitáculo simplificado (volante y palanca animados), instrucciones de voz en la parte superior y **preguntas junto a un minimapa en la pantalla central del coche**. Durante el avance las preguntas desaparecen para dejar ver la carretera. El cuadro presenta velocidad, marcha, cronómetro y faltas.
 
 - Selecciona una respuesta pulsando **A, B, C o D**, o haciendo clic.
 - Pulsa **⛶ Pantalla completa** para ampliar la vista y el mismo botón para salir (también puedes usar Esc).
-- Usa **↻ Reiniciar** para comenzar otra vez y **↓ Resultados** para exportar el registro.
-- El botón **Explorar calles reales (experimental)** mantiene el módulo de navegación geográfica existente.
+- Usa **↻ Volver a DGT** para volver a cargar el punto de salida; **Circuito ficticio** ofrece la demo separada y **↓ Resultados** exporta el registro.
+- El botón **Explorar calles reales (experimental)** permite cargar otra ubicación sin cambiar el punto de inicio predeterminado de Móstoles.
 
 ### Interior del coche y retrovisores (fase Clio)
 
@@ -22,6 +22,14 @@ Los **tres retrovisores son funcionales en el renderizador**: cada uno utiliza u
 Código modular: `src/vehicle/clioInterior.js` (habitáculo, animaciones e instrumentación) y `src/vehicle/mirrorSystem.js` (tres cámaras y texturas). Los antiguos espejos CSS decorativos se han eliminado.
 
 Las marchas y la velocidad son todavía simplificadas: no existe física de motor, embrague o estacionamiento de precisión. La ruta demostrativa sigue siendo ficticia.
+
+## Inicio en Móstoles y minimapa
+
+El juego intenta iniciar automáticamente en la coordenada **40.344103, -3.863962**, señalada por el usuario como punto de salida junto al centro DGT de Móstoles. Descarga la red vial de OpenStreetMap próxima a esa coordenada, conserva la posición indicada como inicio visible y dibuja la conexión aproximada hasta un nodo transitable próximo (como máximo 70 m); el punto exacto de entrada/salida vial, el sentido permitido de maniobra y las señales están **pendientes de verificación presencial**. No se afirma que exista una ruta oficial de examen.
+
+Si el proveedor geográfico no responde, aparece un error y dos opciones explícitas: volver a intentar la carga o abrir el circuito demostrativo **ficticio**. Nunca se cambia silenciosamente a una ruta inventada bajo el nombre de DGT. El minimapa refleja el mismo recorrido y posición que se visualizan en 3D, con norte arriba y una flecha de rumbo. En modo demo se etiqueta como ficticio.
+
+Las preguntas de la demo didáctica se muestran junto al minimapa, dentro de la pantalla del coche. En el modo de red real solo se ofrecen decisiones de navegación geométrica; **no se califican señales ni maniobras reales no verificadas**.
 
 ## IMPORTANTE: qué es real y qué no
 
