@@ -5,12 +5,25 @@ en un proyecto Unity 6 creado con la plantilla **High Definition 3D (HDRP)** de 
 
 ## Estado exacto
 
-Esta fase crea al pulsar Play una maqueta geométrica sin modelos comerciales: habitáculo
-oscuro inspirado en el concepto visual de un Clio básico, manos y brazos provisionales,
-volante animado, palanca manual decorativa, instructor delante, examinador detrás, espejo
-izquierdo/central/derecho con cámaras RenderTexture, minimapa del recorrido de muestra
-en el cuadro detrás del volante y preguntas A/B/C/D en la pantalla multimedia. El volante
-gira visualmente durante los giros; las respuestas causan el avance guiado del coche.
+Al pulsar Play se construye una cabina procedural, en metros, inspirada en un utilitario
+de acceso (negro y gris, plástico mate). No es el CAD de un Renault Clio ni una imagen
+fotorrealista. La cámara está en el asiento delantero izquierdo. El volante tiene aro,
+radios y manos que giran con él; los antebrazos usan dos huesos y siguen las empuñaduras.
+La palanca manual anima el paso de punto muerto a 2ª cuando el coche avanza. El instructor
+va en el asiento derecho y el examinador detrás; este último puede aparecer en el
+retrovisor interior. Los tres espejos usan cámaras y RenderTexture, sin dibujar el
+habitáculo para no reflejarse a sí mismos.
+
+El cuadro, detrás del volante, muestra velocidad, marcha, revoluciones y un minimapa del
+circuito de demostración con la posición y el rumbo del coche. La pantalla central solo
+lleva las preguntas y las respuestas A/B/C/D. Fuera de las pantallas del coche solo queda
+una línea corta con la voz del instructor. Responder sigue moviendo el coche; R reinicia;
+la evaluación por gravedades no cambia.
+
+La calzada de esta escena mide 7,4 m y tiene el eje en la polilínea. El coche circula por
+el centro del carril derecho. Ese desplazamiento no debe copiarse a una calle de sentido
+único. El circuito sigue siendo ficticio. La coordenada `40.344103, -3.863962` es solo
+la referencia geográfica del futuro punto de salida.
 
 **Aún no es un vehículo controlable mediante embrague/pedales, no tiene modelo 3D Renault
 fotorrealista y NO reproduce las calles reales de Móstoles ni un examen oficial**.
@@ -63,9 +76,14 @@ para instalar software en el equipo de la empresa.
    No hace falta colocar componentes: los scripts arrancan automáticamente al pulsar
    el botón **▶ Play**. Selecciona la pestaña **Game** y maximízala si deseas una vista
    amplia. Si el editor pide guardar una escena modificada, puedes hacerlo.
-7. Teclado: A, B, C o D = responder. También puedes hacer clic en una respuesta.
-   R = reiniciar. Después de seleccionar una respuesta el coche recorre un tramo
-   automáticamente y presenta el escenario siguiente.
+7. Teclado: A, B, C o D = responder. También puedes hacer clic en una respuesta
+   de la pantalla central. R = reiniciar. Después de seleccionar una respuesta el
+   coche recorre un tramo automáticamente y presenta el escenario siguiente.
+8. Comprueba, en la pestaña Game: ojos en el asiento izquierdo; volante y manos
+   que giran juntos en las curvas; palanca que sale de punto muerto al avanzar;
+   cuadro con velocidad, marcha, rpm y minimapa; preguntas solo en la pantalla
+   central; tres retrovisores con la vía detrás; instructor a la derecha y
+   examinador visible, al menos en parte, en el espejo interior.
 
 ## Compartir también el proyecto de Unity por GitHub
 
@@ -84,6 +102,32 @@ El `.gitignore` del repositorio excluye Library/Temp/Logs y archivos temporales.
 No subas a GitHub modelos, fotos, texturas o herramientas de terceros sin licencia
 para redistribuirlos. El proyecto web se mantiene en la raíz y seguirá ejecutándose
 con Vite hasta completar la migración de navegación y escenarios.
+
+## Qué está terminado y qué es provisional
+
+Terminado en esta escena: distribución de pantallas, cámara del conductor, giro del
+volante ligado a las manos, palanca que reacciona al cambio de marcha, tres retrovisores
+funcionales, ocupantes sentados con cinturón, preguntas, avance, reinicio y evaluación.
+
+Provisional, a la espera de assets con licencia: la piel del salpicadero (malla generada,
+no escaneada), los dedos (cajas articuladas, no un rig de mano), el instructor y el
+examinador (cápsulas), la carrocería exterior y las revoluciones (relación didáctica
+con la velocidad, no un motor real).
+
+## Modelo 3D que haría falta para acercarse a la foto
+
+Para sustituir la malla procedural sin reescribir la conducción:
+
+- FBX a escala 1 unidad = 1 metro, volante a la izquierda, origen en el suelo y en el
+  centro del vehículo.
+- Mallas separadas: salpicadero, volante (pivote en el centro del aro y eje local de
+  giro documentado), palanca, asientos, paneles de puerta y carcasas de espejo.
+- Texturas PBR (albedo, normal, rugosidad/metalicidad) reasignables a `HDRP/Lit`.
+  Sin shaders de otro motor.
+- Conductor con huesos de hombro, codo, muñeca y dedos, o clips de giro del volante.
+  `DriverArmRig` se puede retirar cuando esas manos cubran el aro sin atravesarlo.
+- Licencia que permita usarlo en un producto de formación. No incorporar un modelo
+  oficial de Renault si no se tiene ese derecho.
 
 ## Limitaciones y diagnóstico
 

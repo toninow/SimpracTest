@@ -1,6 +1,6 @@
 # SimpracTest — prototipo web + transición a Unity 6
 
-**Versión Unity (primer prototipo C#):** [guía de instalación y arranque](unity-template/README.md). Crea un proyecto Unity 6 HDRP con Unity Hub y copia `unity-template/Assets/SimpracTest` a su carpeta `Assets`. Incluye carretera ficticia de prueba, navegación en el cuadro digital, preguntas en pantalla central y tres cámaras de retrovisor. **Aún no hay escena de Móstoles verificada ni coche fotorrealista.** El prototipo web de esta raíz se conserva como referencia de lógica.
+**Versión Unity:** [guía de instalación y arranque](unity-template/README.md). Crea un proyecto Unity 6 HDRP con Unity Hub y copia `unity-template/Assets/SimpracTest` a su carpeta `Assets`. La escena de Play usa una cabina procedural (no un Clio fotorrealista), navegación en el cuadro detrás del volante, preguntas A/B/C/D en la pantalla central y tres retrovisores. **Aún no hay escena de Móstoles verificada ni coche fotorrealista.** El prototipo web de esta raíz se conserva como referencia de lógica.
 
 ## Web original (prototipo 0.1)
 
