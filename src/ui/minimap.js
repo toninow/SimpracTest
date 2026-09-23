@@ -46,7 +46,8 @@ export function createMinimap(canvas) {
     }
     ctx.stroke();
     ctx.strokeStyle='#596e81';ctx.lineWidth=1;ctx.stroke();
-    // Proyección: z positivo apunta al sur en el mapa.\n    ctx.rotate(Math.PI-heading);
+    // Proyección: z positivo apunta al sur en el mapa.
+    ctx.rotate(Math.PI-heading);
     ctx.fillStyle='#42ddaa';ctx.strokeStyle='#07251d';ctx.lineWidth=2;
     ctx.beginPath();ctx.moveTo(0,-12);ctx.lineTo(8,10);ctx.lineTo(0,6);ctx.lineTo(-8,10);ctx.closePath();ctx.fill();ctx.stroke();
     ctx.restore();
