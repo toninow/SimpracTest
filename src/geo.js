@@ -25,12 +25,33 @@ export async function loadMostolesRoads(){
  const graph=parseRoads(await response.json(),origin);
  const viable=new Set(['service','residential','living_street','unclassified','tertiary','secondary']);
  const {metres}=await import('./core.js');
- const candidates=[...graph.nodes.values()].filter(node=>
-   (graph.edges.get(node.id)||[]).some(edge=>viable.has(edge.highway)));
- candidates.sort((a,b)=>metres(a,origin)-metres(b,origin));
- const start=candidates[0];
- if(!start||metres(start,origin)>70)throw Error('No hay un nodo de vía transitable a menos de 70 m del punto de salida indicado. No se moverá el coche a otra zona.');
- return {graph,origin,start,startPosition:{x:0,z:0},distanceToRoad:metres(start,origin),
+ // Distancia al eje de un tramo, no al nodo: los nodos OSM pueden estar separados
+ // decenas de metros aunque el carril pase junto a las coordenadas indicadas.
+ let nearest=null;
+ for(const path of graph.paths){
+  if(!viable.has(path.tags.highway))continue;
+  for(let i=1;i<path.ns.length;i++){
+   const a=graph.nodes.get(path.ns[i-1]),b=graph.nodes.get(path.ns[i]);
+   if(!a||!b)continue;
+   const dx=b.x-a.x,dz=b.z-a.z,denom=dx*dx+dz*dz;
+   if(denom<.01)continue;
+   const t=Math.max(0,Math.min(1,(-a.x*dx-a.z*dz)/denom));
+   const snap={x:a.x+t*dx,z:a.z+t*dz};
+   const distance=Math.hypot(snap.x,snap.z);
+   // Respetar los sentidos de circulación al escoger desde qué extremo empezar.
+   for(const candidate of [a,b]){
+    const edges=graph.edges.get(candidate.id)||[];
+    if(!edges.some(edge=>viable.has(edge.highway)))continue;
+    const score=distance+Math.hypot(candidate.x-snap.x,candidate.z-snap.z)*.002;
+    if(!nearest||score<nearest.score)nearest={score,distance,snap,candidate};
+   }
+  }
+ }
+ if(!nearest||nearest.distance>12)throw Error('No hay una vía de circulación representada en OSM a 12 m o menos del punto indicado. Comprueba si la salida está mapeada antes de empezar.');
+ const start=nearest.candidate;
+ // Mantener la posición solicitada. El primer tramo hasta OSM es una aproximación
+ // geográfica, NO una ruta autorizada ni una geometría de carril verificada.
+ return {graph,origin,start,startPosition:{x:0,z:0},distanceToRoad:nearest.distance,
   place:'Salida indicada · DGT Móstoles (40.344103, -3.863962)',
   verifiedDeparture:false,osmSource:'© OpenStreetMap contributors · ODbL'};
 }
