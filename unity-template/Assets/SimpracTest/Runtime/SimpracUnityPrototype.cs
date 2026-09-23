@@ -439,7 +439,8 @@ namespace SimpracTest
             mapTexture = new Texture2D(224, 128, TextureFormat.RGBA32, false);
             mapTexture.wrapMode = TextureWrapMode.Clamp;
             mapTexture.filterMode = FilterMode.Bilinear;
-            SetupStyles();
+            // GUI.skin solo se puede consultar durante OnGUI (no desde Start).
+            // Las texturas sí se preparan aquí; los estilos se inicializan en OnGUI.
         }
 
         Texture2D Solid(Color color)
@@ -489,7 +490,10 @@ namespace SimpracTest
 
         void OnGUI()
         {
-            if (driverCamera == null || labelStyle == null) return;
+            if (driverCamera == null || panelTexture == null) return;
+            // GUI.skin no está disponible en Start. Inicializar aquí evita
+            // ArgumentException: You can only call GUI functions from inside OnGUI.
+            if (labelStyle == null) SetupStyles();
             if (Event.current.type == EventType.KeyDown)
             {
                 int index = Event.current.keyCode == KeyCode.A ? 0 :
