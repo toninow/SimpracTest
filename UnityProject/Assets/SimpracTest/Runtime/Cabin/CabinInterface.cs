@@ -24,10 +24,12 @@ namespace SimpracTest
         public int Minor;
         public int Deficient;
         public int Eliminating;
+        public int Selected;
     }
 
-    // Cuadro detrás del volante, preguntas en la pantalla central y una línea
-    // de voz arriba de la vista. El teclado sigue siendo A/B/C/D y R.
+    // Cuadro detrás del volante (tacómetro, velocidad y marcha) y pantalla
+    // central con la pregunta a la izquierda y el mapa a la derecha.
+    // El teclado sigue siendo A/B/C/D y R.
     public sealed class CabinInterface : MonoBehaviour
     {
         public event Action<int> AnswerSelected;
@@ -41,16 +43,18 @@ namespace SimpracTest
         DriveHudState state;
         Font font;
         Sprite white;
+        Sprite round;
         Text speedText;
         Text gearText;
-        Text rpmText;
-        Text timerText;
-        Image rpmFill;
+        RectTransform rpmNeedle;
+        RectTransform speedNeedle;
         Text header;
         Text situation;
         Text status;
         readonly Text[] answers = new Text[4];
+        readonly Image[] rowFaces = new Image[4];
         readonly GameObject[] rows = new GameObject[4];
+        Text routeLine;
         GameObject restart;
         Texture2D map;
         Color32[] mapPixels;
@@ -60,9 +64,13 @@ namespace SimpracTest
         int shownSpeed = int.MinValue;
         int shownGear = int.MinValue;
         int shownScene = int.MinValue;
+        int shownSelected = int.MinValue;
         bool shownAsking;
         bool shownFinished;
         float mapClock = 1f;
+        float glideSpeed;
+        float glideRpm = 800f;
+        bool glideReady;
 
         public void Bind(Camera driver, Transform vehicle, ClioCabin cabin, IReadOnlyList<Vector3> centerline, CabinResources bin)
         {
@@ -72,6 +80,7 @@ namespace SimpracTest
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             white = WhiteSprite(bin);
+            round = CircleSprite(bin);
             map = bin.Track(new Texture2D(MapSize, MapSize, TextureFormat.RGBA32, false));
             map.wrapMode = TextureWrapMode.Clamp;
             map.filterMode = FilterMode.Bilinear;
@@ -89,7 +98,8 @@ namespace SimpracTest
                 Title = DrivingScenario.Demo[0].title,
                 Answers = DrivingScenario.Demo[0].answers,
                 Gear = 0,
-                Rpm = 800f
+                Rpm = 800f,
+                Selected = -1
             });
             RedrawMap();
         }
@@ -97,7 +107,31 @@ namespace SimpracTest
         public void Apply(DriveHudState next)
         {
             state = next;
-            int speed = Mathf.RoundToInt(state.SpeedKmh);
+            if (next.SceneIndex != shownScene || next.Asking != shownAsking
+                || next.Finished != shownFinished || next.Selected != shownSelected)
+            {
+                shownScene = next.SceneIndex;
+                shownAsking = next.Asking;
+                shownFinished = next.Finished;
+                shownSelected = next.Selected;
+                RefreshQuestions();
+            }
+        }
+
+        // Las agujas no siguen un motor: suavizan la velocidad y las revoluciones
+        // que entrega el ejercicio. La marcha del cuadro es la que ya muestra la palanca.
+        void Update()
+        {
+            float dt = Time.deltaTime;
+            if (!glideReady)
+            {
+                glideSpeed = state.SpeedKmh;
+                glideRpm = state.Rpm > 1f ? state.Rpm : 800f;
+                glideReady = true;
+            }
+            glideSpeed = Mathf.Lerp(glideSpeed, state.SpeedKmh, 1f - Mathf.Exp(-9f * dt));
+            glideRpm = Mathf.Lerp(glideRpm, state.Rpm, 1f - Mathf.Exp(-3.4f * dt));
+            int speed = Mathf.RoundToInt(glideSpeed);
             if (speedText != null && speed != shownSpeed)
             {
                 speedText.text = speed.ToString();
@@ -108,31 +142,12 @@ namespace SimpracTest
                 gearText.text = state.Gear == 0 ? "N" : state.Gear.ToString();
                 shownGear = state.Gear;
             }
-            if (rpmText != null) rpmText.text = Mathf.RoundToInt(state.Rpm).ToString();
-            if (rpmFill != null)
-            {
-                rpmFill.fillAmount = Mathf.Clamp01(state.Rpm / 6500f);
-                rpmFill.color = state.Rpm > 5200f
-                    ? new Color(0.86f, 0.28f, 0.22f)
-                    : new Color(0.78f, 0.88f, 0.96f);
-            }
-            if (timerText != null)
-            {
-                int seconds = Mathf.FloorToInt(state.ElapsedSeconds);
-                timerText.text = (seconds / 60).ToString("00") + ":" + (seconds % 60).ToString("00");
-            }
-            if (next.SceneIndex != shownScene || next.Asking != shownAsking || next.Finished != shownFinished)
-            {
-                shownScene = next.SceneIndex;
-                shownAsking = next.Asking;
-                shownFinished = next.Finished;
-                RefreshQuestions();
-            }
-        }
+            if (rpmNeedle != null)
+                rpmNeedle.localEulerAngles = new Vector3(0f, 0f, Mathf.Lerp(128f, -128f, Mathf.Clamp01(glideRpm / 7000f)));
+            if (speedNeedle != null)
+                speedNeedle.localEulerAngles = new Vector3(0f, 0f, Mathf.Lerp(128f, -128f, Mathf.Clamp01(glideSpeed / 120f)));
 
-        void Update()
-        {
-            mapClock += Time.deltaTime;
+            mapClock += dt;
             if (mapClock < 0.16f) return;
             mapClock = 0f;
             RedrawMap();
@@ -198,94 +213,143 @@ namespace SimpracTest
 
         void BuildCluster(Transform mount)
         {
-            var canvas = WorldCanvas("Cuadro", mount, new Vector2(680f, 360f), ClioLayout.ClusterSize.x);
-            Image panel = ImageOf(canvas.transform, "Fondo", white, new Color(0.012f, 0.018f, 0.028f, 1f));
+            var canvas = WorldCanvas("Cuadro", mount, new Vector2(860f, 360f), ClioLayout.ClusterSize.x);
+            Image panel = ImageOf(canvas.transform, "Fondo", white, new Color(0.07f, 0.075f, 0.08f, 1f));
             Stretch(panel.rectTransform);
 
-            rpmText = Label(canvas.transform, "Rpm", "800", 22, FontStyle.Normal, new Color(0.75f, 0.86f, 0.95f),
-                new Vector2(-230f, 118f), new Vector2(150f, 32f));
-            var track = ImageOf(canvas.transform, "Barra rpm", white, new Color(0.15f, 0.2f, 0.26f, 1f));
-            Place(track.rectTransform, new Vector2(-230f, 78f), new Vector2(160f, 16f));
-            rpmFill = ImageOf(track.transform, "Lectura rpm", white, new Color(0.78f, 0.88f, 0.96f, 1f));
-            Stretch(rpmFill.rectTransform);
-            rpmFill.type = Image.Type.Filled;
-            rpmFill.fillMethod = Image.FillMethod.Horizontal;
-            Label(canvas.transform, "Tope", "rpm", 14, FontStyle.Normal, new Color(0.55f, 0.66f, 0.76f),
-                new Vector2(-230f, 48f), new Vector2(150f, 24f));
+            var tachCenter = new Vector2(-230f, 8f);
+            rpmNeedle = BuildDial(canvas.transform, tachCenter, 268f, 7, 6, 2, step => step.ToString());
+            Label(canvas.transform, "Unidad rpm", "x1000", 16, FontStyle.Normal, new Color(0.62f, 0.68f, 0.72f),
+                tachCenter + new Vector2(0f, -46f), new Vector2(80f, 22f));
 
-            speedText = Label(canvas.transform, "Velocidad", "0", 78, FontStyle.Bold, Color.white,
-                new Vector2(-20f, 48f), new Vector2(230f, 120f));
-            Label(canvas.transform, "Unidad", "km/h", 18, FontStyle.Normal, new Color(0.7f, 0.82f, 0.92f),
-                new Vector2(-20f, -22f), new Vector2(160f, 28f));
-            gearText = Label(canvas.transform, "Marcha", "N", 48, FontStyle.Bold, new Color(0.55f, 0.95f, 0.72f),
-                new Vector2(78f, 58f), new Vector2(80f, 70f));
-            timerText = Label(canvas.transform, "Tiempo", "00:00", 16, FontStyle.Normal, new Color(0.6f, 0.72f, 0.82f),
-                new Vector2(-20f, -58f), new Vector2(180f, 24f));
-            Label(canvas.transform, "Referencia", "Ref. 40.344103, -3.863962", 13, FontStyle.Normal,
-                new Color(0.45f, 0.58f, 0.68f), new Vector2(-20f, -92f), new Vector2(280f, 22f));
+            speedNeedle = BuildDial(canvas.transform, new Vector2(230f, 8f), 268f, 6, 7, 1, step => (step * 20).ToString());
+
+            speedText = Label(canvas.transform, "Velocidad", "0", 54, FontStyle.Bold, Color.white,
+                new Vector2(0f, 34f), new Vector2(150f, 72f));
+            Label(canvas.transform, "Unidad", "km/h", 16, FontStyle.Normal, new Color(0.7f, 0.8f, 0.88f),
+                new Vector2(0f, -8f), new Vector2(90f, 22f));
+            gearText = Label(canvas.transform, "Marcha", "N", 28, FontStyle.Bold, new Color(0.55f, 0.95f, 0.72f),
+                new Vector2(0f, -46f), new Vector2(70f, 36f));
+            Label(canvas.transform, "Indicadores", "1/2    90°", 13, FontStyle.Normal, new Color(0.7f, 0.78f, 0.74f),
+                new Vector2(0f, -96f), new Vector2(120f, 20f));
+            Paint(canvas.transform);
+        }
+
+        RectTransform BuildDial(Transform parent, Vector2 center, float diameter, int divisions, int redFrom, int labelStep, Func<int, string> labelAt)
+        {
+            DialFace(parent, center, diameter);
+            float radius = diameter * 0.5f;
+            for (int step = 0; step <= divisions; step++)
+            {
+                float degrees = Mathf.Lerp(128f, -128f, step / (float)divisions);
+                float rad = degrees * Mathf.Deg2Rad;
+                var outward = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad));
+                bool major = step % labelStep == 0;
+                bool hot = step >= redFrom;
+                float tickLen = major ? 18f : 10f;
+                var tick = ImageOf(parent, "Marca", white, hot
+                    ? new Color(0.86f, 0.18f, 0.14f)
+                    : new Color(0.86f, 0.9f, 0.93f));
+                var tickRect = tick.rectTransform;
+                tickRect.pivot = new Vector2(0.5f, 0f);
+                tickRect.sizeDelta = new Vector2(major ? 3.5f : 2f, tickLen);
+                tickRect.anchoredPosition = center + outward * (radius - tickLen - 6f);
+                tickRect.localEulerAngles = new Vector3(0f, 0f, degrees);
+                if (major)
+                {
+                    Label(parent, "Escala", labelAt(step), 15, FontStyle.Normal, new Color(0.82f, 0.86f, 0.9f),
+                        center + outward * (radius - tickLen - 28f), new Vector2(36f, 20f));
+                }
+            }
+
+            var needle = ImageOf(parent, "Aguja", white, new Color(0.90f, 0.16f, 0.13f));
+            var rect = needle.rectTransform;
+            rect.pivot = new Vector2(0.5f, 0.08f);
+            rect.sizeDelta = new Vector2(4f, radius - 22f);
+            rect.anchoredPosition = center;
+            var cap = ImageOf(parent, "Eje", round, new Color(0.92f, 0.93f, 0.94f));
+            Place(cap.rectTransform, center, new Vector2(14f, 14f));
+            return rect;
+        }
+
+        void DialFace(Transform parent, Vector2 center, float diameter)
+        {
+            var ring = ImageOf(parent, "Aro de esfera", round, new Color(0.45f, 0.5f, 0.54f, 1f));
+            Place(ring.rectTransform, center, new Vector2(diameter + 8f, diameter + 8f));
+            var face = ImageOf(parent, "Esfera", round, new Color(0.03f, 0.035f, 0.04f, 1f));
+            Place(face.rectTransform, center, new Vector2(diameter, diameter));
+        }
+
+        void BuildQuestions(Transform mount)
+        {
+            var canvas = WorldCanvas("Preguntas", mount, new Vector2(840f, 480f), ClioLayout.QuestionSize.x);
+            Image bezel = ImageOf(canvas.transform, "Fondo de pantalla", white, new Color(0.04f, 0.05f, 0.06f, 1f));
+            Stretch(bezel.rectTransform);
 
             var rawGo = new GameObject("Minimapa");
             rawGo.transform.SetParent(canvas.transform, false);
             var raw = rawGo.AddComponent<RawImage>();
             raw.texture = map;
             raw.raycastTarget = false;
-            Place(raw.rectTransform, new Vector2(210f, 8f), new Vector2(200f, 250f));
-            Label(canvas.transform, "Aviso de mapa", "Circuito ficticio  ·  rumbo ↑", 13, FontStyle.Normal,
-                new Color(0.85f, 0.92f, 0.96f), new Vector2(210f, 112f), new Vector2(190f, 36f));
-            Paint(canvas.transform);
-        }
+            Place(raw.rectTransform, new Vector2(292f, 36f), new Vector2(188f, 188f));
+            Label(canvas.transform, "Aviso de mapa", "Rumbo ↑", 15, FontStyle.Bold,
+                new Color(0.85f, 0.92f, 0.96f), new Vector2(292f, -78f), new Vector2(190f, 22f));
+            routeLine = Label(canvas.transform, "Próxima indicación", "", 14, FontStyle.Normal,
+                new Color(0.78f, 0.86f, 0.9f), new Vector2(292f, -112f), new Vector2(200f, 48f));
 
-        void BuildQuestions(Transform mount)
-        {
-            var canvas = WorldCanvas("Preguntas", mount, new Vector2(980f, 680f), ClioLayout.QuestionSize.x);
-            Image panel = ImageOf(canvas.transform, "Tarjeta", white, new Color(0.95f, 0.96f, 0.95f, 1f));
-            Stretch(panel.rectTransform);
-            header = Label(canvas.transform, "Encabezado", "Pregunta 1", 34, FontStyle.Bold,
-                new Color(0.12f, 0.14f, 0.16f), new Vector2(0f, 286f), new Vector2(900f, 48f));
-            situation = Label(canvas.transform, "Situación", "", 28, FontStyle.Normal,
-                new Color(0.16f, 0.18f, 0.2f), new Vector2(0f, 210f), new Vector2(900f, 100f));
+            Image panel = ImageOf(canvas.transform, "Tarjeta", white, new Color(0.96f, 0.97f, 0.96f, 1f));
+            Place(panel.rectTransform, new Vector2(-118f, 4f), new Vector2(560f, 448f));
+            header = Label(canvas.transform, "Encabezado", "Pregunta 1", 28, FontStyle.Bold,
+                new Color(0.12f, 0.14f, 0.16f), new Vector2(-118f, 200f), new Vector2(520f, 32f));
+            situation = Label(canvas.transform, "Situación", "", 22, FontStyle.Normal,
+                new Color(0.16f, 0.18f, 0.2f), new Vector2(-118f, 150f), new Vector2(520f, 44f));
             situation.alignment = TextAnchor.MiddleLeft;
-            status = Label(canvas.transform, "Estado", "", 28, FontStyle.Normal,
-                new Color(0.16f, 0.18f, 0.2f), new Vector2(0f, -20f), new Vector2(900f, 180f));
+            status = Label(canvas.transform, "Estado", "", 16, FontStyle.Italic,
+                new Color(0.16f, 0.18f, 0.2f), new Vector2(-118f, -186f), new Vector2(520f, 40f));
             status.alignment = TextAnchor.MiddleLeft;
 
             for (int i = 0; i < 4; i++)
             {
-                float y = 78f - i * 92f;
+                float y = 86f - i * 64f;
                 var row = new GameObject("Respuesta" + "ABCD"[i]);
                 row.transform.SetParent(canvas.transform, false);
                 var rect = row.AddComponent<RectTransform>();
-                Place(rect, new Vector2(0f, y), new Vector2(900f, 84f));
+                Place(rect, new Vector2(-118f, y), new Vector2(520f, 56f));
                 var image = row.AddComponent<Image>();
                 image.sprite = white;
-                image.color = new Color(0.88f, 0.9f, 0.89f, 1f);
+                image.color = new Color(0.90f, 0.91f, 0.90f, 1f);
                 image.raycastTarget = false;
+                rowFaces[i] = image;
                 var collider = row.AddComponent<BoxCollider>();
-                collider.size = new Vector3(900f, 84f, 50f);
-                answers[i] = Label(row.transform, "Texto", "ABCD"[i].ToString(), 28, FontStyle.Normal,
-                    new Color(0.1f, 0.12f, 0.14f), Vector2.zero, new Vector2(860f, 76f));
+                collider.size = new Vector3(520f, 56f, 40f);
+                answers[i] = Label(row.transform, "Texto", "ABCD"[i].ToString(), 20, FontStyle.Normal,
+                    new Color(0.1f, 0.12f, 0.14f), Vector2.zero, new Vector2(490f, 50f));
                 answers[i].alignment = TextAnchor.MiddleLeft;
+                answers[i].resizeTextForBestFit = true;
+                answers[i].resizeTextMinSize = 14;
+                answers[i].resizeTextMaxSize = 20;
                 rows[i] = row;
             }
 
             restart = new GameObject("Reiniciar");
             restart.transform.SetParent(canvas.transform, false);
             var restartRect = restart.AddComponent<RectTransform>();
-            Place(restartRect, new Vector2(0f, -180f), new Vector2(900f, 72f));
+            Place(restartRect, new Vector2(-118f, -20f), new Vector2(360f, 44f));
             var restartImage = restart.AddComponent<Image>();
             restartImage.sprite = white;
             restartImage.color = new Color(0.16f, 0.28f, 0.38f, 1f);
             restartImage.raycastTarget = false;
             var restartCollider = restart.AddComponent<BoxCollider>();
-            restartCollider.size = new Vector3(900f, 72f, 50f);
-            Label(restart.transform, "Texto", "R    Volver a comenzar", 28, FontStyle.Bold,
-                Color.white, Vector2.zero, new Vector2(860f, 64f));
+            restartCollider.size = new Vector3(360f, 44f, 40f);
+            Label(restart.transform, "Texto", "R   Volver a comenzar", 18, FontStyle.Bold,
+                Color.white, Vector2.zero, new Vector2(340f, 38f));
             restart.SetActive(false);
         }
 
         void RefreshQuestions()
         {
             if (header == null) return;
+            if (routeLine != null) routeLine.text = Shorten(state.Instruction);
             if (state.Finished)
             {
                 header.text = "Resultado de la práctica";
@@ -300,21 +364,42 @@ namespace SimpracTest
             if (restart != null) restart.SetActive(false);
             header.text = "Pregunta " + (state.SceneIndex + 1) + " de " + Mathf.Max(1, state.SceneCount);
             situation.text = (state.Title ?? "") + "\n" + (state.Situation ?? "");
+            SetRows(true);
+            for (int i = 0; i < answers.Length; i++)
+            {
+                string choice = state.Answers != null && i < state.Answers.Length ? state.Answers[i] : "";
+                answers[i].text = "ABCD"[i] + "    " + choice;
+            }
             if (state.Asking)
             {
                 status.text = "";
-                SetRows(true);
-                for (int i = 0; i < answers.Length; i++)
-                {
-                    string choice = state.Answers != null && i < state.Answers.Length ? state.Answers[i] : "";
-                    answers[i].text = "ABCD"[i] + "     " + choice;
-                }
+                Tint(-1);
             }
             else
             {
-                SetRows(false);
-                status.text = (state.Feedback ?? "") + "\nLa maniobra avanza por el circuito de demostración.";
+                status.text = state.Feedback ?? "";
+                Tint(state.Selected);
             }
+        }
+
+        void Tint(int selected)
+        {
+            for (int i = 0; i < rowFaces.Length; i++)
+            {
+                if (rowFaces[i] == null) continue;
+                bool on = selected == i;
+                rowFaces[i].color = on
+                    ? new Color(0.16f, 0.38f, 0.58f, 1f)
+                    : new Color(0.90f, 0.91f, 0.90f, 1f);
+                if (answers[i] != null)
+                    answers[i].color = on ? Color.white : new Color(0.1f, 0.12f, 0.14f);
+            }
+        }
+
+        static string Shorten(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            return value.Length > 48 ? value.Substring(0, 46) + "…" : value;
         }
 
         void SetRows(bool visible)
@@ -442,6 +527,25 @@ namespace SimpracTest
         {
             root.gameObject.layer = ClioLayout.CockpitLayer;
             for (int i = 0; i < root.childCount; i++) Paint(root.GetChild(i));
+        }
+
+        static Sprite CircleSprite(CabinResources bin)
+        {
+            const int size = 64;
+            var tex = bin.Track(new Texture2D(size, size, TextureFormat.RGBA32, false));
+            tex.wrapMode = TextureWrapMode.Clamp;
+            float radius = size * 0.5f - 0.5f;
+            var pixels = new Color[size * size];
+            var center = new Vector2(size * 0.5f, size * 0.5f);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), center);
+                pixels[y * size + x] = distance <= radius ? Color.white : new Color(0f, 0f, 0f, 0f);
+            }
+            tex.SetPixels(pixels);
+            tex.Apply(false);
+            return bin.Track(Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 100f));
         }
 
         static Sprite WhiteSprite(CabinResources bin)

@@ -36,6 +36,7 @@ namespace SimpracTest
         int sceneIndex;
         readonly int[] faults = new int[4];
         string feedback = "";
+        int selected = -1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
@@ -63,6 +64,7 @@ namespace SimpracTest
             arms.Bind(car.transform, cabin, materials);
             lever = car.AddComponent<GearLever>();
             lever.Bind(cabin, resources, materials);
+            arms.Connect(lever);
             var mirrors = car.AddComponent<MirrorRig>();
             mirrors.Build(car.transform, cabin, resources, materials);
 
@@ -84,6 +86,7 @@ namespace SimpracTest
             sceneIndex = 0;
             steering = 0f;
             feedback = "";
+            selected = -1;
             Array.Clear(faults, 0, faults.Length);
             UpdateCar();
             PushCabin();
@@ -103,6 +106,7 @@ namespace SimpracTest
                     sceneIndex++;
                     phase = sceneIndex >= DrivingScenario.Demo.Length ? Phase.Finished : Phase.Question;
                     feedback = "";
+                    selected = -1;
                 }
             }
             else speedKmH = 0f;
@@ -114,6 +118,8 @@ namespace SimpracTest
             int gear = phase == Phase.Moving ? 2 : 0;
             if (arms != null) arms.SteerInput = steering;
             if (lever != null) lever.Gear = gear;
+            // Revoluciones didácticas, sin embrague ni caja. El cuadro las suaviza.
+            int shownGear = lever != null ? lever.Shown : gear;
             if (hud == null) return;
             int last = DrivingScenario.Demo.Length - 1;
             int index = Mathf.Clamp(sceneIndex, 0, last);
@@ -121,7 +127,7 @@ namespace SimpracTest
             hud.Apply(new DriveHudState
             {
                 SpeedKmh = speedKmH,
-                Gear = gear,
+                Gear = shownGear,
                 Rpm = gear == 0 ? 800f : 950f + speedKmH * 46f,
                 ElapsedSeconds = elapsed,
                 SceneIndex = index,
@@ -136,7 +142,8 @@ namespace SimpracTest
                 Correct = faults[0],
                 Minor = faults[1],
                 Deficient = faults[2],
-                Eliminating = faults[3]
+                Eliminating = faults[3],
+                Selected = selected
             });
         }
 
@@ -184,6 +191,7 @@ namespace SimpracTest
             if (phase != Phase.Question || sceneIndex >= DrivingScenario.Demo.Length) return;
             var scenario = DrivingScenario.Demo[sceneIndex];
             if (index < 0 || index >= scenario.answers.Length) return;
+            selected = index;
             int grade = scenario.grades[index];
             faults[Mathf.Clamp(grade, 0, 3)]++;
             feedback = grade == 0 ? "Decisión registrada. Ejecutando maniobra…" :

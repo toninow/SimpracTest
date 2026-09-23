@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 namespace SimpracTest
 {
-    // Habitáculo procedural inspirado en un Clio de acceso: negro y gris,
-    // plástico mate, sin acabado deportivo. No es un modelo fotorrealista
-    // ni reproduce el CAD del fabricante.
+    // Habitáculo procedural de un utilitario de acceso: negro y gris, plástico
+    // mate. La foto adjunta es solo referencia de encuadre. El coche no es un
+    // Renault; el centro del volante lleva la marca Spt.
     public static class ClioCabinBuilder
     {
         public static ClioCabin Build(Transform car, Camera eyes, CabinResources bin, CabinMaterials mats)
@@ -24,22 +25,20 @@ namespace SimpracTest
             Shifter(cabin, bin, mats);
             Exterior(car, mats);
             MirrorFrames(cabin, eyes, mats);
+            CabinLight(cabin.Root);
             return cabin;
         }
 
         static void Dashboard(Transform root, CabinResources bin, CabinMaterials mats)
         {
-            var pad = new List<Vector2>
+            var pad = SmoothProfile(new[]
             {
-                new Vector2(0.80f, 1.05f),
-                new Vector2(0.86f, 0.96f),
-                new Vector2(0.90f, 0.84f),
-                new Vector2(0.86f, 0.72f),
-                new Vector2(0.76f, 0.60f),
-                new Vector2(0.64f, 0.50f),
-                new Vector2(0.50f, 0.40f),
-                new Vector2(0.40f, 0.36f)
-            };
+                new Vector2(0.80f, 1.05f), new Vector2(0.84f, 1.00f),
+                new Vector2(0.88f, 0.92f), new Vector2(0.90f, 0.84f),
+                new Vector2(0.88f, 0.76f), new Vector2(0.82f, 0.66f),
+                new Vector2(0.74f, 0.56f), new Vector2(0.64f, 0.48f),
+                new Vector2(0.52f, 0.40f), new Vector2(0.40f, 0.36f)
+            });
             MeshPart("Salpicadero", ProceduralMeshes.Ribbon(pad, -0.78f, 0.76f), root,
                 Vector3.zero, Quaternion.identity, mats.Plastic, ClioLayout.CockpitLayer, bin);
 
@@ -58,9 +57,24 @@ namespace SimpracTest
             Box("Alfombrilla", root, new Vector3(0.48f, 0.015f, 0.55f),
                 new Vector3(-0.34f, 0.25f, 0.28f), Vector3.zero, mats.PlasticDark, ClioLayout.CockpitLayer);
 
-            Vent(root, new Vector3(-0.62f, 0.86f, 0.78f), mats);
-            Vent(root, new Vector3(0.46f, 0.86f, 0.78f), mats);
-            Vent(root, new Vector3(-0.05f, 0.78f, 0.70f), mats);
+            Vent(root, new Vector3(-0.08f, 0.90f, 0.76f), mats);
+            Vent(root, new Vector3(0.44f, 0.90f, 0.78f), mats);
+        }
+
+        static List<Vector2> SmoothProfile(Vector2[] keys)
+        {
+            var pad = new List<Vector2>();
+            for (int i = 0; i < keys.Length - 1; i++)
+            {
+                for (int step = 0; step < 3; step++)
+                {
+                    float t = step / 3f;
+                    float eased = t * t * (3f - 2f * t);
+                    pad.Add(Vector2.Lerp(keys[i], keys[i + 1], eased));
+                }
+            }
+            pad.Add(keys[keys.Length - 1]);
+            return pad;
         }
 
         static void Vent(Transform root, Vector3 center, CabinMaterials mats)
@@ -120,6 +134,18 @@ namespace SimpracTest
                 0.03f, 0.025f, mats.PlasticDark);
         }
 
+        static void CabinLight(Transform root)
+        {
+            var lamp = new GameObject("Luz de techo").AddComponent<Light>();
+            lamp.transform.SetParent(root, false);
+            lamp.transform.localPosition = new Vector3(-0.08f, 1.20f, 0.12f);
+            lamp.type = LightType.Point;
+            lamp.range = 2.6f;
+            lamp.intensity = 2.6f;
+            lamp.color = new Color(1f, 0.95f, 0.88f);
+            lamp.shadows = LightShadows.None;
+        }
+
         static void DriverSeat(Transform root, CabinMaterials mats)
         {
             var seat = new GameObject("Asiento del conductor").transform;
@@ -142,8 +168,8 @@ namespace SimpracTest
             wheel.localPosition = ClioLayout.Wheel;
             wheel.localRotation = Quaternion.Euler(ClioLayout.WheelTilt, 0f, 0f);
 
-            MeshPart("Aro", ProceduralMeshes.Torus(ClioLayout.WheelRadius, ClioLayout.WheelTube, 18, 48),
-                wheel, Vector3.zero, Quaternion.identity, mats.PlasticDark, ClioLayout.CockpitLayer, bin);
+            MeshPart("Aro", ProceduralMeshes.Rim(ClioLayout.WheelRadius, 0.034f, 0.024f, 72, 14),
+                wheel, Vector3.zero, Quaternion.identity, mats.Rubber, ClioLayout.CockpitLayer, bin);
             MeshPart("Aro interior", ProceduralMeshes.Torus(ClioLayout.WheelRadius - 0.028f, 0.0045f, 10, 36),
                 wheel, new Vector3(0f, 0f, -0.004f), Quaternion.identity, mats.Trim, ClioLayout.CockpitLayer, bin);
 
@@ -153,11 +179,10 @@ namespace SimpracTest
             Buttons(wheel, 168f, mats);
             Buttons(wheel, 12f, mats);
 
-            // El eje local -Z del aro mira al conductor. El centro y el rombo salen hacia él.
-            Cylinder("Centro del volante", wheel, 0.052f, 0.04f,
-                new Vector3(0f, 0f, -0.02f), new Vector3(-90f, 0f, 0f), mats.Plastic, ClioLayout.CockpitLayer);
-            MeshPart("Rombo geométrico", ProceduralMeshes.Diamond(0.024f, 0.032f, 0.005f),
-                wheel, new Vector3(0f, 0f, -0.048f), Quaternion.identity, mats.Trim, ClioLayout.CockpitLayer, bin);
+            // El eje local -Z del aro mira al conductor. El centro y la marca salen hacia él.
+            Cylinder("Centro del volante", wheel, 0.040f, 0.032f,
+                new Vector3(0f, -0.012f, -0.02f), new Vector3(-90f, 0f, 0f), mats.Plastic, ClioLayout.CockpitLayer);
+            WheelMark(wheel);
 
             cabin.LeftGrip = Grip(wheel, 185f, "Empuñadura izquierda");
             cabin.RightGrip = Grip(wheel, -5f, "Empuñadura derecha");
@@ -190,6 +215,42 @@ namespace SimpracTest
             }
         }
 
+        static void WheelMark(Transform wheel)
+        {
+            var mark = new GameObject("Marca Spt");
+            mark.transform.SetParent(wheel, false);
+            mark.transform.localPosition = new Vector3(0f, -0.012f, -0.046f);
+            mark.transform.localRotation = Quaternion.LookRotation(Vector3.back, Vector3.up);
+            mark.layer = ClioLayout.CockpitLayer;
+
+            var canvas = mark.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            var rect = mark.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(160f, 64f);
+            rect.localScale = Vector3.one * (0.05f / 160f);
+
+            var textObject = new GameObject("Spt");
+            textObject.transform.SetParent(mark.transform, false);
+            textObject.layer = ClioLayout.CockpitLayer;
+            var textRect = textObject.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            var text = textObject.AddComponent<Text>();
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = font;
+            text.text = "Spt";
+            text.fontSize = 46;
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = new Color(0.90f, 0.92f, 0.93f);
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.raycastTarget = false;
+        }
+
         static Transform Grip(Transform wheel, float degrees, string name)
         {
             float rad = degrees * Mathf.Deg2Rad;
@@ -211,8 +272,8 @@ namespace SimpracTest
 
         static void CenterStack(ClioCabin cabin, Camera eyes, CabinMaterials mats)
         {
-            Box("Torre central", cabin.Root, new Vector3(0.48f, 0.40f, 0.16f),
-                new Vector3(0.20f, 0.92f, 0.74f), new Vector3(16f, -6f, 0f),
+            Box("Torre central", cabin.Root, new Vector3(0.32f, 0.20f, 0.07f),
+                new Vector3(0.20f, 0.90f, 0.80f), new Vector3(12f, -6f, 0f),
                 mats.Plastic, ClioLayout.CockpitLayer);
             Box("Consola", cabin.Root, new Vector3(0.34f, 0.16f, 0.55f),
                 new Vector3(0.16f, 0.50f, 0.38f), new Vector3(-18f, 0f, 0f),
@@ -223,7 +284,7 @@ namespace SimpracTest
 
             for (int i = 0; i < 3; i++)
             {
-                Vector3 at = new Vector3(0.02f + i * 0.09f, 0.74f, 0.58f);
+                Vector3 at = new Vector3(0.08f + i * 0.12f, 0.74f, 0.62f);
                 Cylinder("Mando de clima", cabin.Root, 0.028f, 0.016f,
                     at, new Vector3(78f, 0f, 0f), mats.PlasticSoft, ClioLayout.CockpitLayer);
                 Box("Índice", cabin.Root, new Vector3(0.006f, 0.016f, 0.006f),
@@ -236,17 +297,14 @@ namespace SimpracTest
 
         static void ClusterBinnacle(ClioCabin cabin, Camera eyes, CabinMaterials mats)
         {
-            Box("Visera del cuadro", cabin.Root, new Vector3(0.32f, 0.035f, 0.10f),
-                new Vector3(-0.36f, 1.07f, 0.70f), new Vector3(28f, 0f, 0f),
-                mats.PlasticDark, ClioLayout.CockpitLayer);
-            Box("Marco del cuadro", cabin.Root, new Vector3(0.30f, 0.17f, 0.02f),
-                new Vector3(-0.36f, 0.97f, 0.69f), new Vector3(8f, 0f, 0f),
-                mats.Plastic, ClioLayout.CockpitLayer);
+            Box("Visera del cuadro", cabin.Root, new Vector3(0.27f, 0.016f, 0.05f),
+                new Vector3(ClioLayout.Cluster.x, ClioLayout.Cluster.y + 0.075f, ClioLayout.Cluster.z + 0.04f),
+                new Vector3(16f, 0f, 0f), mats.PlasticDark, ClioLayout.CockpitLayer);
             Span("Columna de dirección", cabin.Root, new Vector3(-0.36f, 0.72f, 0.62f),
                 ClioLayout.Wheel + new Vector3(0f, 0f, -0.04f), 0.07f, 0.07f, mats.PlasticDark);
 
             cabin.ClusterMount = Mount("Cuadro digital", ClioLayout.Cluster, eyes);
-            Frame(cabin.ClusterMount, ClioLayout.ClusterSize, mats.Screen);
+            Frame(cabin.ClusterMount, ClioLayout.ClusterSize, mats.PlasticDark);
         }
 
         static void Shifter(ClioCabin cabin, CabinResources bin, CabinMaterials mats)

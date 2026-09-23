@@ -10,7 +10,7 @@ namespace SimpracTest
     {
         public static void Build(Transform car, CabinMaterials mats)
         {
-            var instructor = Person(car, "Instructor", new Vector3(0.40f, 0f, 0.05f), -12f,
+            var instructor = Person(car, "Instructor", new Vector3(0.50f, 0f, 0.02f), -8f,
                 mats.Navy, mats.Khaki, mats, ClioLayout.CockpitLayer);
             Clipboard(instructor, mats);
 

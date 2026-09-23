@@ -8,8 +8,20 @@ namespace SimpracTest
     public sealed class GearLever : MonoBehaviour
     {
         public int Gear;
+        public int Shown { get; private set; }
+        public bool HandHolding;
+        public Transform Pivot => pivot;
 
         Transform pivot;
+
+        public bool Settled
+        {
+            get
+            {
+                if (pivot == null) return true;
+                return Shown == Gear && Quaternion.Angle(pivot.localRotation, Aim(Gear)) < 3f;
+            }
+        }
 
         public void Bind(ClioCabin cabin, CabinResources bin, CabinMaterials mats)
         {
@@ -30,17 +42,24 @@ namespace SimpracTest
             plate.layer = ClioLayout.CockpitLayer;
         }
 
-        void LateUpdate()
+        // La palanca no se mueve hasta que la mano derecha ha agarrado el pomo.
+        public void Pose(float deltaTime)
         {
             if (pivot == null) return;
-            Vector3 gate = Offset(Gear) * 0.042f;
+            int goal = HandHolding ? Gear : Shown;
+            float blend = 1f - Mathf.Exp(-9f * Mathf.Max(0f, deltaTime));
+            pivot.localRotation = Quaternion.Slerp(pivot.localRotation, Aim(goal), blend);
+            if (HandHolding && Quaternion.Angle(pivot.localRotation, Aim(Gear)) < 3f) Shown = Gear;
+        }
+
+        static Quaternion Aim(int gear)
+        {
+            Vector3 gate = Offset(gear) * 0.042f;
             float reach = Mathf.Max(0.05f, ClioLayout.ShifterLength);
-            Quaternion target = Quaternion.Euler(
+            return Quaternion.Euler(
                 Mathf.Atan2(gate.z, reach) * Mathf.Rad2Deg,
                 0f,
                 -Mathf.Atan2(gate.x, reach) * Mathf.Rad2Deg);
-            float blend = 1f - Mathf.Exp(-9f * Time.deltaTime);
-            pivot.localRotation = Quaternion.Slerp(pivot.localRotation, target, blend);
         }
 
         static Vector3 Offset(int gear)

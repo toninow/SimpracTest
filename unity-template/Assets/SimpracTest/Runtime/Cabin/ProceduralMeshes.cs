@@ -144,33 +144,49 @@ namespace SimpracTest
             return mesh;
         }
 
-        public static Mesh Diamond(float halfWidth, float halfHeight, float depth)
+        // Aro de volante: la sección es más ancha hacia el conductor que un tubo redondo.
+        public static Mesh Rim(float radius, float axial, float radial, int around, int profile)
         {
-            var vertices = new Vector3[8];
-            Vector2[] face =
+            around = Mathf.Max(16, around);
+            profile = Mathf.Max(8, profile);
+            var vertices = new Vector3[(around + 1) * (profile + 1)];
+            var uv = new Vector2[vertices.Length];
+            int index = 0;
+            for (int a = 0; a <= around; a++)
             {
-                new Vector2(0f, halfHeight),
-                new Vector2(halfWidth, 0f),
-                new Vector2(0f, -halfHeight),
-                new Vector2(-halfWidth, 0f)
-            };
-            for (int i = 0; i < 4; i++)
-            {
-                vertices[i] = new Vector3(face[i].x, face[i].y, depth * 0.5f);
-                vertices[i + 4] = new Vector3(face[i].x, face[i].y, -depth * 0.5f);
+                float phi = a * Mathf.PI * 2f / around;
+                var radialDir = new Vector3(Mathf.Cos(phi), Mathf.Sin(phi), 0f);
+                for (int p = 0; p <= profile; p++)
+                {
+                    float theta = p * Mathf.PI * 2f / profile;
+                    float c = Mathf.Cos(theta);
+                    float s = Mathf.Sin(theta);
+                    float side = Mathf.Sign(c) * Mathf.Pow(Mathf.Abs(c), 0.55f) * axial * 0.5f;
+                    float thick = Mathf.Sign(s) * Mathf.Pow(Mathf.Abs(s), 0.7f) * radial * 0.5f;
+                    vertices[index] = radialDir * (radius + thick) + Vector3.forward * side;
+                    uv[index] = new Vector2(a / (float)around, p / (float)profile);
+                    index++;
+                }
             }
 
-            var triangles = new[]
+            var triangles = new int[around * profile * 6];
+            int t = 0;
+            int stride = profile + 1;
+            for (int a = 0; a < around; a++)
+            for (int p = 0; p < profile; p++)
             {
-                0, 1, 2, 0, 2, 3,
-                4, 6, 5, 4, 7, 6,
-                0, 4, 5, 0, 5, 1,
-                1, 5, 6, 1, 6, 2,
-                2, 6, 7, 2, 7, 3,
-                3, 7, 4, 3, 4, 0
-            };
-            var mesh = new Mesh { name = "Rombo" };
+                int v = a * stride + p;
+                triangles[t++] = v;
+                triangles[t++] = v + 1;
+                triangles[t++] = v + stride;
+                triangles[t++] = v + 1;
+                triangles[t++] = v + stride + 1;
+                triangles[t++] = v + stride;
+            }
+
+            var mesh = new Mesh { name = "Aro de volante" };
             mesh.vertices = vertices;
+            mesh.uv = uv;
             mesh.triangles = triangles;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();

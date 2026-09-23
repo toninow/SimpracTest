@@ -5,10 +5,11 @@ en un proyecto Unity 6 creado con la plantilla **High Definition 3D (HDRP)** de 
 
 ## Estado exacto
 
-Al pulsar Play se construye una cabina procedural, en metros, inspirada en un utilitario
-de acceso (negro y gris, plástico mate). No es el CAD de un Renault Clio ni una imagen
-fotorrealista. La cámara está en el asiento delantero izquierdo. El volante tiene aro,
-radios y manos que giran con él; los antebrazos usan dos huesos y siguen las empuñaduras.
+Al pulsar Play se construye una cabina procedural, en metros, de un utilitario de acceso
+(negro y gris, plástico mate). La foto del habitáculo es solo referencia de encuadre:
+el coche no es un Renault. En el centro del volante se lee **Spt**. La cámara está en
+el asiento delantero izquierdo. El volante tiene aro, radios y manos que giran con él;
+los antebrazos usan dos huesos y siguen las empuñaduras.
 La palanca manual anima el paso de punto muerto a 2ª cuando el coche avanza. El instructor
 va en el asiento derecho y el examinador detrás; este último puede aparecer en el
 retrovisor interior. Los tres espejos usan cámaras y RenderTexture, sin dibujar el
@@ -25,7 +26,7 @@ el centro del carril derecho. Ese desplazamiento no debe copiarse a una calle de
 único. El circuito sigue siendo ficticio. La coordenada `40.344103, -3.863962` es solo
 la referencia geográfica del futuro punto de salida.
 
-**Aún no es un vehículo controlable mediante embrague/pedales, no tiene modelo 3D Renault
+**Aún no es un vehículo controlable mediante embrague/pedales, no tiene modelo 3D
 fotorrealista y NO reproduce las calles reales de Móstoles ni un examen oficial**.
 La coordenada `40.344103, -3.863962`, indicada por el usuario, se conserva como
 referencia del futuro punto de salida geográfico. El mapa y las calles de esta fase
@@ -126,8 +127,8 @@ Para sustituir la malla procedural sin reescribir la conducción:
   Sin shaders de otro motor.
 - Conductor con huesos de hombro, codo, muñeca y dedos, o clips de giro del volante.
   `DriverArmRig` se puede retirar cuando esas manos cubran el aro sin atravesarlo.
-- Licencia que permita usarlo en un producto de formación. No incorporar un modelo
-  oficial de Renault si no se tiene ese derecho.
+- Licencia que permita usarlo en un producto de formación. El volante del simulador
+  lleva la marca Spt; no hace falta el emblema de ningún fabricante.
 
 ## Limitaciones y diagnóstico
 
