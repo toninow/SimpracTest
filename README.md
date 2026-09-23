@@ -1,4 +1,8 @@
-# SimpracTest — prototipo 0.1
+# SimpracTest — prototipo web + transición a Unity 6
+
+**Versión Unity (primer prototipo C#):** [guía de instalación y arranque](unity-template/README.md). Crea un proyecto Unity 6 HDRP con Unity Hub y copia `unity-template/Assets/SimpracTest` a su carpeta `Assets`. Incluye carretera ficticia de prueba, navegación en el cuadro digital, preguntas en pantalla central y tres cámaras de retrovisor. **Aún no hay escena de Móstoles verificada ni coche fotorrealista.** El prototipo web de esta raíz se conserva como referencia de lógica.
+
+## Web original (prototipo 0.1)
 
 Simulador interactivo de entrenamiento para el examen práctico del permiso B en España. **Móstoles es la primera zona de desarrollo**, no el nombre del juego.
 
