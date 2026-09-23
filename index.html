@@ -16,7 +16,7 @@
         <span id="badge">MODO DEMOSTRACIÓN</span>
       </header>
       <div id="status"><span id="source">Circuito ficticio de entrenamiento</span><span id="progress">Preparación</span></div>
-      <div id="examiner"><span class="examiner-label">● EXAMINADOR</span><span id="instruction">El examinador le indica que inicie la marcha cuando esté preparado.</span></div>
+      <div id="examiner"><span class="examiner-label">● INSTRUCCIÓN</span><span id="instruction">El examinador le indica que inicie la marcha cuando esté preparado.</span></div>
       <div id="hud-stack">
         <div id="dashboard" aria-label="Cuadro de instrumentos">
           <div><small>VELOCIDAD</small><strong id="speed">0 <small>km/h</small></strong></div>
@@ -24,14 +24,30 @@
           <div><small>EXAMEN</small><strong id="clock">00:00</strong></div>
           <div><small>FALTAS</small><strong id="faults">0</strong></div>
         </div>
-        <section id="decision-panel" aria-label="Decisiones del examen">
-          <div id="description"><h2>Preparación del vehículo</h2><div id="details">Este primer circuito es una demostración, no una ruta real de examen.</div></div>
-          <div id="choices" role="group" aria-label="Opciones de maniobra"></div>
-          <div id="feedback" aria-live="polite"></div>
-        </section>
+      </div>
+      <section id="infotainment" aria-label="Pantalla del coche: preguntas y minimapa">
+        <div class="screen-top"><strong>SIMPR ACTEST</strong><span id="screen-mode">DGT · MÓSTOLES</span></div>
+        <div class="screen-body">
+          <section id="decision-panel" aria-label="Decisiones del examen">
+            <div id="description"><h2>Preparación</h2><div id="details">Prepara el vehículo para salir.</div></div>
+            <div id="choices" role="group" aria-label="Opciones de maniobra"></div>
+            <div id="feedback" aria-live="polite"></div>
+          </section>
+          <section id="minimap-panel" aria-label="Minimapa de situación">
+            <canvas id="minimap" width="180" height="180" aria-label="Posición del coche y trazado de la zona"></canvas>
+          </section>
+        </div>
+      </section>
+      <div id="start-screen" role="status" aria-live="polite">
+        <div class="start-card">
+          <strong>SimpracTest · Móstoles</strong>
+          <p id="start-message">Cargando las calles próximas al centro de exámenes de la DGT…</p>
+          <button id="retry-dgt" type="button" hidden>Reintentar calles reales</button>
+          <button id="try-demo" type="button" hidden>Entrar en circuito de demostración ficticio</button>
+        </div>
       </div>
       <div class="bottom" aria-label="Controles del simulador">
-        <button id="restart" type="button">↻ Reiniciar</button>
+        <button id="restart" type="button">↻ Volver a DGT</button>\n        <button id="demo" type="button">Circuito ficticio</button>
         <button id="fullscreen" type="button" aria-label="Activar o desactivar pantalla completa">⛶ Pantalla completa</button>
         <button id="export" type="button">↓ Resultados</button>
       </div>
